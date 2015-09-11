@@ -1,7 +1,9 @@
 var ws;
 
 function ready(){
-
+	
+	timer();
+	
 	// Sensor simulator
 	setInterval(function(){
 		var data = Math.floor((Math.random() * 2));
@@ -42,3 +44,20 @@ function updatechat(message){
 function printMessage(data){
 	document.getElementById("info").innerHTML = data;
 }
+
+function timer(){
+	setInterval(function(){
+		ws.send('{\"pid\" : \"timer\",\"type\" : \"post\",\"values\" : [" "]}');
+	},1000);
+}
+
+function login(){
+    $("#signin").fadeIn(500);
+    $(".form-horizontal").animate({marginTop: "20vh"},1000);
+
+	$("button.signin").click(function(){
+	    $("#signin").fadeOut(500);
+    	$(".form-horizontal").animate({marginTop: "100vh"},1000);
+	});
+}
+login(); 

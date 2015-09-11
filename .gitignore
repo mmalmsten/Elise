@@ -1,0 +1,10 @@
+# Ignore everything
+*
+
+# Add these files
+!.gitignore
+!main.pl
+!assets/
+!documentation/
+
+!*/

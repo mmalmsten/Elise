@@ -43,7 +43,10 @@ server(Port) :-
 	),
 	create_chat_room,
 	http_server(http_dispatch, [port(Port)]).
-	%thread_signal(chatroom, (attach_console, trace)).
+%****************************************************************************************
+%	Debug. (Restart Prolog after being used)
+%		thread_signal(chatroom, (attach_console, trace)).
+%****************************************************************************************	
 
 
 
@@ -70,7 +73,6 @@ accept_chat(WebSocket) :-
 
 
 :- dynamic
-	utterance/3,
 	visitor/1.
 
 create_chat_room :-
@@ -82,9 +84,6 @@ chatroom(Room) :-
 	debug(chat, 'Got message ~p', [Message]),
 	handle_message(Message, Room),
 	chatroom(Room).
-
-
-
 
 
 %****************************************************************************************
@@ -117,28 +116,83 @@ handle_json_message(_{pid:"chat",type:"post",values:["update"]}, Client, Room) :
 	hub_broadcast(Room.name, websocket{client:Client,data:Javascript,format:string,hub:chat,opcode:text}),
 	debug(chat, 'Reload chat.pl', []).
 handle_json_message(_{pid:"chat",type:"post",values:["clear"]}, Client, Room) :- 
-	retractall(utterance(_,_,_)),
 	format(atom(Clearchat), 'var element = document.getElementById("newchatbox");while (element.firstChild) element.removeChild(element.firstChild);',[]),
 	hub_broadcast(Room.name, websocket{client:Client,data:Clearchat,format:string,hub:chat,opcode:text}),
 	debug(chat, 'Clear All Post recieved', []).
 handle_json_message(_{pid:"chat",type:"post",values:["admin",Message,_]}, _Client, _Room) :- 
-	retractall(utterance(_,Message,_)),
 	debug(chat, 'Clear A certain Post recieved, ~p', [Message]).
 handle_json_message(_{pid:"chat",type:"post",values:[Message]}, Client, Room) :- 
 	format(atom(Javascript), 'updatechat(~p);', [Message]),
-	assertz(utterance(Message)),
 	hub_broadcast(Room.name, websocket{client:Client,data:Javascript,format:string,hub:chat,opcode:text}),
 	debug(chat, 'Post recieved ~p', [Message]).
+
+%****************************************************************************************
+%	Prolog get empty message from JS every second
+%****************************************************************************************
+handle_json_message(_{pid:"timer",type:"post",values:[" "]}, Client, Room) :- 
+	checkactivity(Room,Client),
+	debug(chat, 'Tick tack.', []).
 
 %****************************************************************************************
 % Debug: Is the machine on or off?
 %****************************************************************************************
 handle_json_message(_{pid:"data",type:"post",values:[Data]}, _Client, _Room) :- 
+	%gtrace,
 	atom_number(Data, X),
 	checkthenumber(X),
+	%assertevents(X),
+	%notrace,
 	debug(chat, 'Data recieved ~p', [Data]).
 
-	checkthenumber(X) :- X > 0,
+
+%****************************************************************************************
+% Predicate for debug: Is the machine on or off?
+%****************************************************************************************
+
+checkthenumber(X) :- X > 0,
 		debug(chat, 'Stove on - ~p', [X]).
-	checkthenumber(X) :- X < 1,
+checkthenumber(X) :- X < 1,
 		debug(chat, 'Stove off - ~p', [X]).
+
+%****************************************************************************************
+% Event clauses list (for dev time purposes)
+%
+%	In clause list:
+%	on/off (atom)
+%	Timestamp (timestamp)
+%	Normal/Abnormal/*No note*
+%
+%	An example of an event
+%   event(on,2457275.0040,"Normal").
+%****************************************************************************************
+
+event(on,2457275.0060,"Normal").
+event(off,2457275.0055,"Normal").
+event(on,2457275.0050,"Normal").
+event(off,2457275.0045,"Normal").
+event(on,2457275.0040,"Normal").
+
+%assertevents(Eventint) :-
+%	nth_clause(event(Eventint,_),1,Ref).
+
+%assertevents(Eventint) :-
+%		get_time(Timestamp),
+%		asserta(event(Eventint,Timestamp,"")).
+
+%****************************************************************************************
+% Poll the event clauses
+%
+%timer(Room,Client) :-
+%	format(atom(Javascript), 'updatechat(~p);', ["uppdatering av servern klar"]),
+%	hub_broadcast(Room.name, websocket{client:Client,data:Javascript,format:string,hub:chat,opcode:text}),
+%	debug(chat, 'Sending ~p', [Javascript]).
+
+
+%****************************************************************************************
+% Get data from newest clause and send to GUI
+%****************************************************************************************
+
+checkactivity(Room,Client) :- event(_,Timestamp,_),
+	format(atom(Javascript), 'document.getElementById("info").innerHTML = "~f";', [Timestamp]),
+	hub_broadcast(Room.name, websocket{client:Client,data:Javascript,format:string,hub:chat,opcode:text}),
+	debug(chat, 'Sending ~p', [Javascript]).
