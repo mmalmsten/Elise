@@ -2,13 +2,11 @@ var ws;
 
 function ready(){
 	
-	timer();
-	
 	// Sensor simulator
 	setInterval(function(){
 		var data = Math.floor((Math.random() * 2));
 		ws.send('{\"pid\" : \"data\",\"type\" : \"post\",\"values\" : ["' + data + '"]}');
-	},1000);
+	},30000);
 	// End of simulator
 
 	// Websocket connection to main.pl
@@ -45,17 +43,16 @@ function printMessage(data){
 	document.getElementById("info").innerHTML = data;
 }
 
-function timer(){
-	setInterval(function(){
-		ws.send('{\"pid\" : \"timer\",\"type\" : \"post\",\"values\" : [" "]}');
-	},1000);
-}
-
 function login(){
     $("#signin").fadeIn(500);
     $(".form-horizontal").animate({marginTop: "20vh"},1000);
 
 	$("button.signin").click(function(){
+	    $("#signin").fadeOut(500);
+    	$(".form-horizontal").animate({marginTop: "100vh"},1000);
+	});
+
+	$(".close").click(function(){
 	    $("#signin").fadeOut(500);
     	$(".form-horizontal").animate({marginTop: "100vh"},1000);
 	});
