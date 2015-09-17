@@ -111,6 +111,120 @@ timestatus(Room, Client) :-
 %****************************************************************************************
 % Get message from GUI
 %****************************************************************************************
+%  Examensarbete
+%
+%   Author:        Madeleine Malmsten
+%   E-mail:        info@malmsten.eu
+%   WWW:           http://www.malmsten.eu
+%   Copyright (C): 2015, Madeleine Malmsten
+%
+%****************************************************************************************
+
+
+:- module(chat_server,
+	  [ server/0,
+	    server/1,
+	    create_chat_room/0
+	  ]).
+:- use_module(library(http/thread_httpd)).
+:- use_module(library(http/http_dispatch)).
+:- use_module(library(http/websocket)).
+:- use_module(library(http/html_write)).
+:- use_module(library(http/js_write)).
+:- use_module(library(http/json)).
+:- use_module(library(http/json_convert)).
+:- use_module(library(debug)).
+:- use_module(library(http/http_files)).
+
+:- use_module(hub).
+:- use_module(library(threadutil)).
+
+:- use_module(library(error)).
+
+:- dynamic event/12.
+
+
+server :-
+	server(80).
+
+server(Port) :-
+	(   debugging(chat),
+	    current_prolog_flag(gui, true)
+	->  prolog_ide(thread_monitor)
+	;   true
+	),
+	create_chat_room,
+	http_server(http_dispatch, [port(Port)]),
+	init_events("event.pl"),
+	asserta(event(0,0,"")),
+	asserta(status(0)).
+	
+%****************************************************************************************
+%	Debug. (Restart Prolog after being used)
+%		thread_signal(chatroom, (attach_console, trace)).
+%****************************************************************************************	
+
+
+
+%:- http_handler(root(.), serve_files, [prefix]).
+:- http_handler(root(.), http_reply_from_files('assets', []), [prefix]).
+:- http_handler(root(event),
+		http_upgrade_to_websocket(
+		    accept_chat,
+		    [ guarded(false),
+		      subprotocols([chat])
+		    ]),
+		[ id(chat_websocket)
+		]).
+
+
+serve_files(Request) :-
+	 http_reply_from_files('assets', [], Request).
+serve_files(Request) :-
+	  http_404([], Request).
+
+
+accept_chat(WebSocket) :-
+	hub_add(chat, WebSocket, _Id).
+
+
+:- dynamic
+	visitor/1.
+
+create_chat_room :-
+	hub_create(chat, Room, _{}),
+	thread_create(chatroom(Room), _, [alias(chatroom)]).
+
+chatroom(Room) :-
+	thread_get_message(Room.queues.event, Message),
+	debug(chat, 'Got message ~p', [Message]),
+	handle_message(Message, Room),
+	chatroom(Room).
+
+%****************************************************************************************
+% The time status predicate (recursive), that will be runned every second
+%****************************************************************************************
+timestatus(Room, Client) :-
+	status(0),
+	format(atom(Javascript), 'document.getElementById("info").innerHTML = "00:00:00";', []),
+	hub_broadcast(Room.name, websocket{client:Client,data:Javascript,format:string,hub:chat,opcode:text}),
+	debug(chat, 'Sending ~p', [Javascript]),
+	alarm(1,timestatus(Room, Client), _Id, [remove(true)]).
+
+timestatus(Room, Client) :-
+	get_time(Now), 
+	event(_Status,Oldtime,_Message),
+	Timestamp is Now - Oldtime, 
+	stamp_date_time(Timestamp, date(_, _, _, H, M, S, _, _, _), 'UTC'),
+	debug(chat, 'Running alarm', []),
+    format(atom(Javascript), 'document.getElementById("info").innerHTML = "~|~`0t~d~2+:~|~`0t~d~2+:~|~`0t~0f~2+";', [H,M,S]),
+	hub_broadcast(Room.name, websocket{client:Client,data:Javascript,format:string,hub:chat,opcode:text}),
+	debug(chat, 'Sending ~p', [Javascript]),
+	alarm(1,timestatus(Room, Client), _Id, [remove(true)]).
+
+%****************************************************************************************
+% Get message from GUI
+%****************************************************************************************
 
 handle_message(Message, Room) :- 
 	websocket{client:Client,data:Data,format:string,hub:chat,opcode:text} :< Message, !,
@@ -163,15 +277,7 @@ handle_json_message(_{pid:"data",type:"post",values:[Data]}, _Client, _Room) :-
 	debug(chat, 'Data recieved ~p', [Data]).
 
 %****************************************************************************************
-% Event clauses list (for dev time purposes)
-%
-%	In clause list:
-%	1/0 (on/off)
-%	Timestamp (timestamp)
-%	Normal/Abnormal/*No note*
-%
-%	An example of an event
-%   event(on,2457275.0040,"Normal").
+% Add event to event clauses list (in event.pl)
 %****************************************************************************************
 
 assertevents(Eventint,Eventint) :-
@@ -180,4 +286,34 @@ assertevents(Eventint,Eventint) :-
 assertevents(X, _Eventint) :-
 		get_time(Timestamp),
 		debug(chat, 'New eventint ~p', [Timestamp]),
-		asserta(event(X,Timestamp,"")).
+		Evt = event(X,Timestamp,unknown),
+		asserta(Evt),
+		open('event.pl', append, Stream),
+		write(Stream, Evt),
+		write(Stream, '.'),
+		nl(Stream),
+		flush_output(Stream),
+		debug(chat, 'Closing ~p', [Stream]),
+		close(Stream).
+		
+%****************************************************************************************
+% Read events from file
+%****************************************************************************************
+
+init_events(File) :-
+        retractall(event(_,_,_)),
+        open(File, read, Stream),
+        call_cleanup(load_event(Stream),
+                     close(Stream)).
+
+load_event(Stream) :-
+        read(Stream, T0),
+        load_event(T0, Stream).
+
+load_event(end_of_file, _) :- !.
+load_event(event(Status,Tstamp,Normal), Stream) :- !,
+        assertz(event(Status,Tstamp,Normal)),
+        read(Stream, T2),
+        load_event(T2, Stream).
+load_event(Term, _Stream) :-
+        type_error(event, Term).

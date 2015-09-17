@@ -4,6 +4,7 @@
 # Add these files
 !.gitignore
 !main.pl
+!event.pl
 !assets/
 !documentation/
 
