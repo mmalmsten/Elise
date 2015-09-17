@@ -57,4 +57,12 @@ function login(){
     	$(".form-horizontal").animate({marginTop: "100vh"},1000);
 	});
 }
-login(); 
+
+function brokenPattern(){
+    $(".correct").fadeIn(1000);
+    $(".correct .title").animate({marginTop: "0"},1000);
+    $('.correct .info .btn').attr("disabled", false);
+}
+
+//login(); 
+//brokenPattern();

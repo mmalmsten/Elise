@@ -2,6 +2,44 @@
 body {
   font-family: 'Raleway', sans-serif;
 }
+.background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  margin: 0;
+  opacity: 0.1;
+}
+.background .polygon-img {
+  background-position: center;
+  background-size: cover;
+  padding: 0;
+  float: left;
+}
+@media screen and (max-width: 767px) {
+  .polygon-img {
+    margin-right: 2vw;
+    width: 48vw;
+    height: 53.33333333333333vw;
+    margin-bottom: -10.56vw;
+  }
+  .polygon-img.even {
+    margin-left: 25vw;
+  }
+}
+@media screen and (min-width: 768px) {
+  .polygon-img {
+    margin-right: 1vw;
+    width: 24vw;
+    height: 26.666666666666664vw;
+    margin-bottom: -5.28vw;
+  }
+  .polygon-img.even {
+    margin-left: 12.5vw;
+  }
+}
 #signin {
   display: none;
   position: fixed;
@@ -41,6 +79,32 @@ body {
   margin-left: 30px;
   font-size: 2em;
 }
+.correct {
+  display: none;
+}
+.correct div {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  background-color: rgba(255, 255, 255, 0.95);
+  text-align: center;
+  line-height: 25vh;
+}
+.correct .title {
+  margin-top: -25vh;
+}
+.correct .title .lead {
+  font-size: 3.5vw;
+}
+.correct .info {
+  top: auto;
+  bottom: 0;
+  line-height: normal;
+}
+.correct .info .btn {
+  margin: 15px;
+}
 #info {
   font-family: 'Inconsolata', Serif;
   font-size: 20vw;
@@ -61,14 +125,26 @@ body {
 .btn-primary {
   color: #fff;
   background-color: #748992;
-  border-color: #46545a;
-  border-radius: 0;
+  border-color: #5d6f76;
 }
 .btn-primary:hover,
 .btn-primary:active,
 .btn-primary:focus {
-  background-color: #46545a;
-  border-color: #191e21;
+  background-color: #5d6f76;
+  border-color: #46545a;
+  -webkit-box-shadow: none !important;
+  box-shadow: none !important;
+}
+.btn-danger {
+  color: #fff;
+  background-color: #a55656;
+  border-color: #834545;
+}
+.btn-danger:hover,
+.btn-danger:active,
+.btn-danger:focus {
+  background-color: #834545;
+  border-color: #623333;
   -webkit-box-shadow: none !important;
   box-shadow: none !important;
 }

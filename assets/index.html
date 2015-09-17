@@ -24,15 +24,49 @@
 	</head>
 	<body onload="ready()">
 
+		<div class="background row">
+			<div class="polygon-img" style="background-image: url(img/1.png);"></div>
+			<div class="polygon-img" style="background-image: url(img/2.png);"></div>
+			<div class="polygon-img hidden-xs" style="background-image: url(img/3.png);"></div>
+			<div class="polygon-img hidden-xs" style="background-image: url(img/polygon.png);"></div>
+
+			<div class="polygon-img even" style="background-image: url(img/polygon.png);"></div>
+			<div class="polygon-img hidden-xs" style="background-image: url(img/polygon.png);"></div>
+			<div class="polygon-img hidden-xs" style="background-image: url(img/polygon.png);"></div>
+
+			<div class="polygon-img" style="background-image: url(img/polygon.png);"></div>
+			<div class="polygon-img" style="background-image: url(img/polygon.png);"></div>
+			<div class="polygon-img hidden-xs" style="background-image: url(img/polygon.png);"></div>
+			<div class="polygon-img hidden-xs" style="background-image: url(img/polygon.png);"></div>
+
+			<div class="polygon-img even" style="background-image: url(img/polygon.png);"></div>
+			<div class="polygon-img hidden-xs" style="background-image: url(img/polygon.png);"></div>
+			<div class="polygon-img hidden-xs" style="background-image: url(img/polygon.png);"></div>
+		</div>
+
 		<div id="info">00:00</div>
 
 		<div id="buttons">
-			<button type="submit" value="stop" onclick="chat('stop');" class="btn btn-primary">
-				Stopp!
-			</button>
 			<button type="submit" value="update" onclick="chat('update');" class="btn btn-primary">
 				Uppdatera server!
 			</button>
+		</div>
+
+		<div class="correct">
+			<div class="title">
+				<span class="lead">Det verkar som att mönstret brutits? Stämmer detta?</span>
+			</div>
+			<div class="info">
+				<button type="submit" value="correct" onclick="chat('STOP!');" class="btn btn-danger btn-lg" disabled>
+					Stäng av spisen!
+				</button>
+				<button type="submit" value="correct" onclick="chat('ignore');" class="btn btn-primary btn-lg" disabled>
+					Detta är ett undantag
+				</button>
+				<button type="submit" value="ignore" onclick="chat('correct');" class="btn btn-primary btn-lg" disabled>
+					Nej, mönstret har inte brutits
+				</button>
+			</div>
 		</div>
 
 		<div id="signin">
