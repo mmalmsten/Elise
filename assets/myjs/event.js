@@ -1,13 +1,6 @@
 var ws;
 
 function ready(){
-	
-	// Sensor simulator
-	setInterval(function(){
-		var data = Math.floor((Math.random() * 2));
-		ws.send('{\"pid\" : \"data\",\"type\" : \"post\",\"values\" : ["' + data + '"]}');
-	},30000);
-	// End of simulator
 
 	// Websocket connection to main.pl
 	if ('MozWebSocket' in window) {
