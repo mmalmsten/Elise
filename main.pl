@@ -1,5 +1,5 @@
 %****************************************************************************************
-%  Examensarbete
+%  Thesis Work
 %
 %   Author:        Madeleine Malmsten
 %   E-mail:        info@malmsten.eu
@@ -107,28 +107,40 @@ sensorsimulator() :-
 	alarm(10,sensorsimulator(), _Id, [remove(true)]).
 
 %****************************************************************************************
-% Tracker 
+% Tracker
+% This predicate keeps tracking the event clauses for unusual things that should not happen or
+% for things that has not happened but should happen.
 %****************************************************************************************
 
-% Funktion som trackar om händelsen ägt rum ungefär samma tid (+/- 30min t.ex.), oavsett datum
+% TODO	
+% If the stove is off, calculate and print next start time based on weekday
 tracker() :-
-	status(1),	
+	fail,
+	status(0),
 	get_time(Timestamp),
-	debug(chat, 'Trackertime ~p', [Timestamp]),
-	stamp_date_time(Timestamp, date(_, _, _, Currenthour, Currentminute, _, _, _, _), 'UTC'),
-	event(0,Starttime,Message,Endtime),
-	\+(Message == ignore) ,
+	event(0,Starttime,Message,_Endtime),
+	\+(Message == ignore),
+	debug(chat, 'Weekday test', []),
+	format_time(atom(A), '%u', Starttime),
+	atom_number(A, Eventdayofweek),
+	format_time(atom(B), '%u', Timestamp),
+	atom_number(B, Thisdayofweek),
+	debug(chat, 'Eventdayofweek ~p', [Eventdayofweek]),
+	debug(chat, 'Thisdayofweek ~p', [Thisdayofweek]),
+	Thisdayofweek = Eventdayofweek,
 	stamp_date_time(Starttime, date(_, _, _, Eventstarthour, Eventstartminute, _, _, _, _), 'UTC'),
-	stamp_date_time(Endtime, date(_, _, _, Eventendhour, Eventendminute, _, _, _, _), 'UTC'),
-	Startofevent = Eventstarthour * 60 + Eventstartminute,
-	Endofevent = Eventendhour * 60 + Eventendminute,
-	Nowinminutes = Currenthour * 60 + Currentminute,
-	Nowinminutes > Startofevent - 30,
-	Nowinminutes < Endofevent + 30,
-	debug(chat, 'Success ~p', [Nowinminutes]),
+	Nexteventtimeinminutes = Eventstarthour * 60 + Eventstartminute,
+	stamp_date_time(Timestamp, date(_, _, _, Timestamphour, Timestampminute, _, _, _, _), 'UTC'),
+	Thistimeinminutes = Timestamphour * 60 + Timestampminute,	
+	Nexteventtimeinminutes > Thistimeinminutes,
+	Nextstarttime = Nexteventtimeinminutes - Thistimeinminutes,
+    format(atom(Javascript), 'document.getElementById("status").innerHTML = "Maskinen borde starta om cirka ~|~`0t~d~2+ minuter";', [Nextstarttime]),
+	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),
+	debug(chat, 'Next session should start in ~p minutes, Eventdayofweek: ~p, Thisdayofweek: ~p', [Nextstarttime,Eventdayofweek,Thisdayofweek]),
 	alarm(10,tracker(), _Id, [remove(true)]),!.
 
-% Om maskinen är av, en funktion som trackar om händelsen ägt rum ungefär samma tid (+/- 30min t.ex.), oavsett datum, och skickar varning till GUI om det är så
+% If the stove is off, predicate tracking if event has happened about the same time before
+% (+/- 30 minutes) no matter which week or weekday. If true, send a warning to GUI.
 tracker() :-
 	status(0),	
 	get_time(Timestamp),
@@ -148,7 +160,32 @@ tracker() :-
 	debug(chat, 'Borde maskinen inte vara på???', []),
 	alarm(10,tracker(), _Id, [remove(true)]),!.
 
-% Om maskinen är på, funktion som trackar om maskinen varit på längre tid än normalt
+% All good
+tracker() :-
+	status(0),	
+	debug(chat, 'All good', []),
+	alarm(10,tracker(), _Id, [remove(true)]),!.
+
+% If the stove is on, predicate tracking if event has happened about the same time before 
+% (+/- 30 minutes) no matter which week or weekday
+tracker() :-
+	status(1),	
+	get_time(Timestamp),
+	debug(chat, 'Trackertime ~p', [Timestamp]),
+	stamp_date_time(Timestamp, date(_, _, _, Currenthour, Currentminute, _, _, _, _), 'UTC'),
+	event(0,Starttime,Message,Endtime),
+	\+(Message == ignore) ,
+	stamp_date_time(Starttime, date(_, _, _, Eventstarthour, Eventstartminute, _, _, _, _), 'UTC'),
+	stamp_date_time(Endtime, date(_, _, _, Eventendhour, Eventendminute, _, _, _, _), 'UTC'),
+	Startofevent = Eventstarthour * 60 + Eventstartminute,
+	Endofevent = Eventendhour * 60 + Eventendminute,
+	Nowinminutes = Currenthour * 60 + Currentminute,
+	Nowinminutes > Startofevent - 30,
+	Nowinminutes < Endofevent + 30,
+	debug(chat, 'Success ~p', [Nowinminutes]),
+	alarm(10,tracker(), _Id, [remove(true)]),!.
+
+% If the stove is on, calculate if event is at least 50% longer than normal
 tracker() :-
 	status(1),	
 	get_time(Timestamp),
@@ -170,33 +207,49 @@ tracker() :-
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),	
 	alarm(10,tracker(), _Id, [remove(true)]),!.
 
-% All good
-tracker() :-
-	status(0),	
-	debug(chat, 'All good', []),
-	alarm(10,tracker(), _Id, [remove(true)]),!.
-
-
 %****************************************************************************************
 % The time status predicate (recursive), that will be runned every second to update the GUI
+% If the stove is off, calculate and print next start time no matter which week or weekday.
 %****************************************************************************************
 timestatus(Client) :-
 	status(0),
-	format(atom(Javascript), 'document.getElementById("info").innerHTML = "00:00:00";', []),
-	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),
-	%debug(chat, 'Sending ~p', [Javascript]),
+	get_time(Now),
+	debug(chat, 'Time status 0', []),
+	event(0,Starttime,Message,_Endtime),
+	\+(Message == ignore),
+	stamp_date_time(Starttime, date(_, _, _, Eventstarthour, Eventstartminute, Eventstartsecond, _, _, _), 'UTC'),
+	stamp_date_time(Now, date(_, _, _, Timestamphour, Timestampminute, Timestampsecond, _, _, _), 'UTC'),
+	check_nxt_starttime(Timestamphour,Eventstarthour,Timestampminute,Eventstartminute,Timestampsecond,Eventstartsecond),
 	alarm(1,timestatus(Client), _Id, [remove(true)]).
 
 timestatus(Client) :-
+	status(1),
 	get_time(Now), 
+	debug(chat, 'Time status 1', []),
 	event(_Status,Oldtime,_Message,_),
 	Timestamp is Now - Oldtime, 
 	stamp_date_time(Timestamp, date(_, _, _, H, M, S, _, _, _), 'UTC'),
-	%debug(chat, 'Running alarm', []),
     format(atom(Javascript), 'document.getElementById("info").innerHTML = "~|~`0t~d~2+:~|~`0t~d~2+:~|~`0t~0f~2+";', [H,M,S]),
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),
-	%debug(chat, 'Sending ~p', [Javascript]),
 	alarm(1,timestatus(Client), _Id, [remove(true)]).
+
+timestatus(Client) :-
+	debug(chat, 'Time status fails', []),
+    format(atom(Javascript), 'document.getElementById("info").innerHTML = "00:00:00";', []),
+	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),
+	alarm(1,timestatus(Client), _Id, [remove(true)]).
+
+check_nxt_starttime(NH,EH,NM,EM,NS,ES) :- 
+	Nowseconds = ((NH * 60) + NM) * 60 + NS,
+	Eventseconds = ((EH * 60) + EM) * 60 + ES,
+	Eventseconds > Nowseconds,
+	debug(chat, 'Nowseconds ~f', [Nowseconds]),
+	debug(chat, 'Eventseconds ~f', [Eventseconds]),
+	Seconds is Eventseconds - Nowseconds,
+	debug(chat, 'Eventseconds ~f', [Seconds]),
+    format(atom(Javascript), 'nextStart("~f")', [Seconds]),
+	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}).
+
 
 %****************************************************************************************
 % Get message from GUI
