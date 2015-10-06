@@ -112,49 +112,32 @@ sensorsimulator() :-
 % for things that has not happened but should happen.
 %****************************************************************************************
 
-% TODO	
-% If the stove is off, calculate and print next start time based on weekday
 tracker() :-
-	fail,
-	status(0),
-	get_time(Timestamp),
-	event(0,Starttime,Message,_Endtime),
-	\+(Message == ignore),
-	debug(chat, 'Weekday test', []),
-	format_time(atom(A), '%u', Starttime),
-	atom_number(A, Eventdayofweek),
-	format_time(atom(B), '%u', Timestamp),
-	atom_number(B, Thisdayofweek),
-	debug(chat, 'Eventdayofweek ~p', [Eventdayofweek]),
-	debug(chat, 'Thisdayofweek ~p', [Thisdayofweek]),
-	Thisdayofweek = Eventdayofweek,
-	stamp_date_time(Starttime, date(_, _, _, Eventstarthour, Eventstartminute, _, _, _, _), 'UTC'),
-	Nexteventtimeinminutes = Eventstarthour * 60 + Eventstartminute,
-	stamp_date_time(Timestamp, date(_, _, _, Timestamphour, Timestampminute, _, _, _, _), 'UTC'),
-	Thistimeinminutes = Timestamphour * 60 + Timestampminute,	
-	Nexteventtimeinminutes > Thistimeinminutes,
-	Nextstarttime = Nexteventtimeinminutes - Thistimeinminutes,
-    format(atom(Javascript), 'document.getElementById("status").innerHTML = "Maskinen borde starta om cirka ~|~`0t~d~2+ minuter";', [Nextstarttime]),
+	format(atom(Javascript), 'correctPattern();', []), % remove brokenPattern
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),
-	debug(chat, 'Next session should start in ~p minutes, Eventdayofweek: ~p, Thisdayofweek: ~p', [Nextstarttime,Eventdayofweek,Thisdayofweek]),
-	alarm(10,tracker(), _Id, [remove(true)]),!.
+	fail.
 
 % If the stove is off, predicate tracking if event has happened about the same time before
-% (+/- 30 minutes) no matter which week or weekday. If true, send a warning to GUI.
+% no matter which week or weekday. If true, send a warning to GUI.
 tracker() :-
 	status(0),	
 	get_time(Timestamp),
 	debug(chat, 'Trackertime ~p', [Timestamp]),
 	stamp_date_time(Timestamp, date(_, _, _, Currenthour, Currentminute, _, _, _, _), 'UTC'),
-	event(0,Starttime,Message,Endtime),
-	\+(Message == ignore) ,
-	stamp_date_time(Starttime, date(_, _, _, Eventstarthour, Eventstartminute, _, _, _, _), 'UTC'),
-	stamp_date_time(Endtime, date(_, _, _, Eventendhour, Eventendminute, _, _, _, _), 'UTC'),
-	Startofevent = Eventstarthour * 60 + Eventstartminute,
-	Endofevent = Eventendhour * 60 + Eventendminute,
-	Nowinminutes = Currenthour * 60 + Currentminute,
-	Nowinminutes > Startofevent,
-	Nowinminutes < Endofevent,
+	findall(Starttime,(
+		event(0,Starttime,Message,Endtime),
+		\+(Message == ignore),
+		stamp_date_time(Starttime, date(_, _, _, Eventstarthour, Eventstartminute, _, _, _, _), 'UTC'),
+		stamp_date_time(Endtime, date(_, _, _, Eventendhour, Eventendminute, _, _, _, _), 'UTC'),
+		Startofevent = Eventstarthour * 60 + Eventstartminute, % Start time in minutes since 00.00
+		Endofevent = Eventendhour * 60 + Eventendminute,
+		Nowinminutes = Currenthour * 60 + Currentminute,
+		Nowinminutes > Startofevent,
+		Nowinminutes < Endofevent), % At this time of day the stove is usually on, but since status is zero it is not on now
+		List),
+	length(List,Length),
+	Length > 1,	
+	debug(chat, 'Found ~p events (must be more than 1)', [Length]),
 	format(atom(Javascript), 'brokenPattern();', []),
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),	
 	debug(chat, 'Borde maskinen inte vara på???', []),
@@ -166,10 +149,69 @@ tracker() :-
 	debug(chat, 'All good', []),
 	alarm(10,tracker(), _Id, [remove(true)]),!.
 
-% If the stove is on, predicate tracking if event has happened about the same time before 
-% (+/- 30 minutes) no matter which week or weekday
+
+% If the stove is on, predicate tracking if event
+% has happened about the same time before (+/- 30 minutes) and consider weekday
 tracker() :-
 	status(1),	
+	get_time(Timestamp),
+	debug(chat, 'Trackertime ~p', [Timestamp]),
+	stamp_date_time(Timestamp, date(_, _, _, Currenthour, Currentminute, _, _, _, _), 'UTC'),
+	event(0,Starttime,Message,Endtime),
+	\+(Message == ignore) ,
+	format_time(atom(TWN), '%V', Timestamp), % Set week number and check odd/ even
+	atom_number(TWN, Thisweeknumber),
+	format_time(atom(EWD), '%V', Starttime),
+	atom_number(EWD, Eventweeknumber),
+	Evenodd is Thisweeknumber + Eventweeknumber,
+	Evenodd mod 2 =:= 0,
+	format_time(atom(TDW), '%u', Timestamp),
+	atom_number(TDW, Thisdow),
+	format_time(atom(EWD), '%u', Starttime),
+	atom_number(EWD, Eventdow),
+	Thisdow == Eventdow,
+	stamp_date_time(Starttime, date(_, _, _, Eventstarthour, Eventstartminute, _, _, _, _), 'UTC'),
+	stamp_date_time(Endtime, date(_, _, _, Eventendhour, Eventendminute, _, _, _, _), 'UTC'),
+	Startofevent = Eventstarthour * 60 + Eventstartminute,
+	Endofevent = Eventendhour * 60 + Eventendminute,
+	Nowinminutes = Currenthour * 60 + Currentminute,
+	Nowinminutes > Startofevent - 30,
+	Nowinminutes < Endofevent + 30,
+	debug(chat, 'This event has happened this time before considering time of day, week number AND weekday', []),
+	alarm(10,tracker(), _Id, [remove(true)]),!.
+
+% Same as above, but do NOT consider week number
+tracker() :-
+	status(1),	
+	findall(Starttime,event(0,Starttime,_Message,_Endtime),Elist),
+	length(Elist,Length),
+	Length < 40,
+	get_time(Timestamp),
+	debug(chat, 'Trackertime ~p', [Timestamp]),
+	stamp_date_time(Timestamp, date(_, _, _, Currenthour, Currentminute, _, _, _, _), 'UTC'),
+	event(0,Starttime,Message,Endtime),
+	\+(Message == ignore) ,
+	format_time(atom(A), '%u', Timestamp),
+	atom_number(A, Thisdow),
+	format_time(atom(B), '%u', Starttime),
+	atom_number(B, Eventdow),
+	Thisdow == Eventdow,
+	stamp_date_time(Starttime, date(_, _, _, Eventstarthour, Eventstartminute, _, _, _, _), 'UTC'),
+	stamp_date_time(Endtime, date(_, _, _, Eventendhour, Eventendminute, _, _, _, _), 'UTC'),
+	Startofevent = Eventstarthour * 60 + Eventstartminute,
+	Endofevent = Eventendhour * 60 + Eventendminute,
+	Nowinminutes = Currenthour * 60 + Currentminute,
+	Nowinminutes > Startofevent - 30,
+	Nowinminutes < Endofevent + 30,
+	debug(chat, 'This event has happened this time before considering time of day AND weekday', []),
+	alarm(10,tracker(), _Id, [remove(true)]),!.
+
+% Same as above, but do NOT consider week number OR weekday
+tracker() :-
+	status(1),
+	findall(Starttime,event(0,Starttime,_Message,_Endtime),Elist),
+	length(Elist,Length),
+	Length < 25,
 	get_time(Timestamp),
 	debug(chat, 'Trackertime ~p', [Timestamp]),
 	stamp_date_time(Timestamp, date(_, _, _, Currenthour, Currentminute, _, _, _, _), 'UTC'),
@@ -182,12 +224,82 @@ tracker() :-
 	Nowinminutes = Currenthour * 60 + Currentminute,
 	Nowinminutes > Startofevent - 30,
 	Nowinminutes < Endofevent + 30,
-	debug(chat, 'Success ~p', [Nowinminutes]),
+	debug(chat, 'This event has happened this time before considering time of day', []),
 	alarm(10,tracker(), _Id, [remove(true)]),!.
 
-% If the stove is on, calculate if event is at least 50% longer than normal
+
+
+
+% If the stove is on, calculate if event is at least 50% longer than normal consider time of day, odd/even week AND weekday
 tracker() :-
 	status(1),	
+	get_time(Timestamp),
+	event(1,Currentstarttime,Thismessage,_Endtime),
+	event(0,Starttime,Oldmessage,Endtime),
+	\+(Thismessage == ignore),
+	\+(Oldmessage == ignore),
+	format_time(atom(TWN), '%V', Currentstarttime), % Set week number and check odd/ even
+	atom_number(TWN, Thisweeknumber),
+	format_time(atom(EWD), '%V', Starttime),
+	atom_number(EWD, Eventweeknumber),
+	Evenodd is Thisweeknumber + Eventweeknumber,
+	Evenodd mod 2 =:= 0,
+	format_time(atom(A), '%u', Currentstarttime),
+	atom_number(A, Thisdow),
+	format_time(atom(B), '%u', Starttime),
+	atom_number(B, Eventdow),
+	Thisdow == Eventdow,
+	Currentsession = Timestamp - Currentstarttime,
+	Eventsession = Endtime - Starttime,
+	Currentsession < Eventsession * 1.5,
+	debug(chat, 'Not longer time running than normal considering time of day AND weekday', []),
+	alarm(10,tracker(), _Id, [remove(true)]),!.
+
+% Same as above, but do NOT consider odd/even week
+tracker() :-
+	status(1),	
+	findall(Starttime,event(0,Starttime,_,_),Elist),
+	length(Elist,Length),
+	Length < 40,
+	get_time(Timestamp),
+	event(1,Currentstarttime,Thismessage,_Endtime),
+	event(0,Starttime,Oldmessage,Endtime),
+	\+(Thismessage == ignore),
+	\+(Oldmessage == ignore),
+	format_time(atom(A), '%u', Currentstarttime),
+	atom_number(A, Thisdow),
+	format_time(atom(B), '%u', Starttime),
+	atom_number(B, Eventdow),
+	Thisdow == Eventdow,
+	Currentsession = Timestamp - Currentstarttime,
+	Eventsession = Endtime - Starttime,
+	Currentsession < Eventsession * 1.5,
+	debug(chat, 'Not longer time running than normal considering time of day AND weekday', []),
+	alarm(10,tracker(), _Id, [remove(true)]),!.
+
+% Same as above, but do NOT consider odd/even week OR weekday
+tracker() :-
+	status(1),	
+	findall(Starttime,event(0,Starttime,_,_),Elist),
+	length(Elist,Length),
+	Length < 30,
+	get_time(Timestamp),
+	event(1,Currentstarttime,Thismessage,_Endtime),
+	event(0,Starttime,Oldmessage,Endtime),
+	\+(Thismessage == ignore),
+	\+(Oldmessage == ignore),
+	Currentsession = Timestamp - Currentstarttime,
+	Eventsession = Endtime - Starttime,
+	Currentsession < Eventsession * 1.5,
+	debug(chat, 'Not longer time running than normal considering time of day', []),
+	alarm(10,tracker(), _Id, [remove(true)]),!.
+
+% Same as above, but do NOT consider weekday, odd/even week OR time
+tracker() :-
+	status(1),	
+	findall(Starttime,event(0,Starttime,_,_),Elist),
+	length(Elist,Length),
+	Length < 15,
 	get_time(Timestamp),
 	event(1,Currentstarttime,Thismessage,_Endtime),
 	event(0,Starttime,Oldmessage,Endtime),
@@ -215,11 +327,22 @@ timestatus(Client) :-
 	status(0),
 	get_time(Now),
 	debug(chat, 'Time status 0', []),
-	event(0,Starttime,Message,_Endtime),
-	\+(Message == ignore),
-	stamp_date_time(Starttime, date(_, _, _, Eventstarthour, Eventstartminute, Eventstartsecond, _, _, _), 'UTC'),
-	stamp_date_time(Now, date(_, _, _, Timestamphour, Timestampminute, Timestampsecond, _, _, _), 'UTC'),
-	check_nxt_starttime(Timestamphour,Eventstarthour,Timestampminute,Eventstartminute,Timestampsecond,Eventstartsecond),
+	setof(Seconds,(
+		event(0,Starttime,Message,_Endtime),
+		\+(Message == ignore),
+		stamp_date_time(Starttime, date(_, _, _, Eventstarthour, Eventstartminute, Eventstartsecond, _, _, _), 'UTC'),
+		stamp_date_time(Now, date(_, _, _, Timestamphour, Timestampminute, Timestampsecond, _, _, _), 'UTC'),
+		Nowseconds = ((Timestamphour * 60) + Timestampminute) * 60 + Timestampsecond,
+		Eventseconds = ((Eventstarthour * 60) + Eventstartminute) * 60 + Eventstartsecond,
+		Eventseconds > Nowseconds,
+		Seconds is Eventseconds - Nowseconds
+	), List),
+	length(List,Length),
+	debug(chat, 'Length is ~p', [Length]),	
+	reverse(List,List1),
+	[Head|_Tail] = List1,
+    format(atom(Javascript), 'nextStart("~f")', [Head]),
+	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),
 	alarm(1,timestatus(Client), _Id, [remove(true)]).
 
 timestatus(Client) :-
@@ -238,18 +361,6 @@ timestatus(Client) :-
     format(atom(Javascript), 'document.getElementById("info").innerHTML = "00:00:00";', []),
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),
 	alarm(1,timestatus(Client), _Id, [remove(true)]).
-
-check_nxt_starttime(NH,EH,NM,EM,NS,ES) :- 
-	Nowseconds = ((NH * 60) + NM) * 60 + NS,
-	Eventseconds = ((EH * 60) + EM) * 60 + ES,
-	Eventseconds > Nowseconds,
-	debug(chat, 'Nowseconds ~f', [Nowseconds]),
-	debug(chat, 'Eventseconds ~f', [Eventseconds]),
-	Seconds is Eventseconds - Nowseconds,
-	debug(chat, 'Eventseconds ~f', [Seconds]),
-    format(atom(Javascript), 'nextStart("~f")', [Seconds]),
-	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}).
-
 
 %****************************************************************************************
 % Get message from GUI
@@ -274,24 +385,34 @@ handle_message(Message, _Room) :-
 handle_json_message(_{pid:"event",type:"make",values:[]}, Client, _Room) :- % Web page opened
 	alarm(1,timestatus(Client), _Id, [remove(true)]),
 	debug(chat, 'Make recieved.', []).
-handle_json_message(_{pid:"chat",type:"post",values:[""]}, _Client, _Room) :- 
-	debug(chat, 'Empty Post recieved', []).
-handle_json_message(_{pid:"chat",type:"post",values:["update"]}, Client, Room) :- 
-	consult("chat.pl"),
-	format(atom(Javascript), 'updatechat(~p);', ["uppdatering av servern klar"]),
-	hub_broadcast(Room.name, websocket{client:Client,data:Javascript,format:string,hub:chat,opcode:text}),
-	debug(chat, 'Reload chat.pl', []).
-handle_json_message(_{pid:"chat",type:"post",values:["clear"]}, Client, Room) :- 
-	format(atom(Clearchat), 'var element = document.getElementById("newchatbox");while (element.firstChild) element.removeChild(element.firstChild);',[]),
-	hub_broadcast(Room.name, websocket{client:Client,data:Clearchat,format:string,hub:chat,opcode:text}),
-	debug(chat, 'Clear All Post recieved', []).
-handle_json_message(_{pid:"chat",type:"post",values:["admin",Message,_]}, _Client, _Room) :- 
-	debug(chat, 'Clear A certain Post recieved, ~p', [Message]).
-handle_json_message(_{pid:"chat",type:"post",values:[Message]}, Client, _Room) :- 
-	format(atom(Javascript), 'updatechat(~p);', [Message]),
-	%hub_broadcast(Room.name, websocket{client:Client,data:Javascript,format:string,hub:chat,opcode:text}),
-	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),
-	debug(chat, 'Post recieved ~p', [Message]).
+
+handle_json_message(_{pid:"chat",type:"post",values:[Input]}, Client, Room) :- % Turn off stove
+	Input == "stop",
+	Event = event(Status,Oldtime,_Message,Endtime),
+	retract(Event),
+	Updateevent = event(Status,Oldtime,ignore,Endtime),
+	asserta(Updateevent),
+	format(atom(Json), '{command : stop}', []),
+	hub_broadcast(Room.name, websocket{client:Client,data:Json,format:string,hub:chat,opcode:text}),
+	format(atom(Javascript), 'printMessage("stop");', []),
+	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),!.
+
+handle_json_message(_{pid:"chat",type:"post",values:[Input]}, Client, _Room) :- % Ignore this event in list
+	Input == "ignore",
+	Event = event(Status,Oldtime,_Message,Endtime),
+	retract(Event),
+	Updateevent = event(Status,Oldtime,ignore,Endtime),
+	asserta(Updateevent),
+	format(atom(Javascript), 'printMessage("ignore");', []),
+	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),!.
+
+handle_json_message(_{pid:"chat",type:"post",values:[Input]}, Client, _Room) :- % The event is correct
+	Input == "correct",
+	format(atom(Javascript), 'printMessage("correct");', []),
+	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),!.
+
+handle_json_message(_, _, _) :-
+	debug(chat, 'Ooops', []).
 
 %****************************************************************************************
 % Add event to event clauses list (in event.pl) if status have changed

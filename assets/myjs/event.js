@@ -24,16 +24,20 @@ function ready(){
 	}
 }
 
-function chat(message){
-		ws.send('{\"pid\" : \"chat\",\"type\" : \"post\",\"values\" : ["' + message + '"]}');
-}
-
-function updatechat(message){
-	alert(message);
-}
-
 function printMessage(data){
-	document.getElementById("info").innerHTML = data;
+	var message;
+	if(data == "stop") {
+		message = "Spisen har nu stängts av, och den här händelsen ignoreras vid framtida beräkningar."		
+	} else if(data == "ignore") {
+		message = "Den här händelsen ignoreras vid framtida beräkningar."
+	} else if(data == "correct") {
+		message = "Ooops! Ursäkta att jag störde!"		
+	}
+	$("#message").html(message);
+    $("#printmessage").animate({marginTop: "20vh", opacity: "1"},1000);
+	$(".closemessage").click(function(){
+    	$("#printmessage").animate({marginTop: "100vh", opacity: "0"},1000);
+	});
 }
 
 function zeroPad(num) {
@@ -70,5 +74,16 @@ function brokenPattern(){
     $('.correct .info .btn').attr("disabled", false);
 }
 
+function correctPattern(){
+    $(".correct").fadeOut(1000);
+    $(".correct .title").animate({marginTop: "-150px"},1000);
+    $('.correct .info .btn').attr("disabled", true);
+}
+
+function send(message){
+		ws.send('{\"pid\" : \"chat\",\"type\" : \"post\",\"values\" : ["' + message + '"]}');
+}
+
 //login(); 
 //brokenPattern();
+//correctPattern();

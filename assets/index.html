@@ -47,24 +47,18 @@
 		<div id="info">00:00</div>
 		<div id="status">Status</div>
 
-		<div id="buttons">
-			<button type="submit" value="update" onclick="chat('update');" class="btn btn-primary">
-				Uppdatera server!
-			</button>
-		</div>
-
 		<div class="correct">
 			<div class="title">
 				<span class="lead">Det verkar som att mönstret har brutits? Stämmer detta?</span>
 			</div>
 			<div class="info">
-				<button type="submit" value="correct" onclick="chat('STOP!');" class="btn btn-danger btn-lg" disabled>
+				<button value="stop" onclick="send('stop');" class="btn btn-danger btn-lg" disabled>
 					Stäng av spisen!
 				</button>
-				<button type="submit" value="correct" onclick="chat('ignore');" class="btn btn-primary btn-lg" disabled>
+				<button value="correct" onclick="send('correct');" class="btn btn-primary btn-lg" disabled>
 					Ja
 				</button>
-				<button type="submit" value="ignore" onclick="chat('correct');" class="btn btn-primary btn-lg" disabled>
+				<button value="ignore" onclick="send('ignore');" class="btn btn-primary btn-lg" disabled>
 					Nej
 				</button>
 			</div>
@@ -85,6 +79,13 @@
 					<button type="submit" class="btn btn-primary btn-lg signin">Sign in</button>
 				</div>
 			</div>
+		</div>
+
+		<div id="printmessage">
+			<div class="closemessage"><span class="glyphicon glyphicon-remove" aria-hidden="true"></span></div>
+			<h1>Hej!</h1>
+			<div id="message"></div>
+			<div class="sign">Mvh Stina</div>
 		</div>
 
 		<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js" type="text/javascript"></script>
