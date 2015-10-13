@@ -3381,6 +3381,11 @@ static struct primfcn primt[] = {
 	{"0SETDTOA", P_gert_setdtoa},		
 #endif /* GERTBOARD */
 
+#ifdef I2C
+	  {"0I2CINIT", P_i2c_init},
+	  {"0I2CREAD", P_i2c_read},
+#endif /* I2C */
+
 #ifdef TELLDUS
 	  {"0TELLRAWCALLBACK", P_tell_rawevent},
 	  {"0TELLDEVICEID", P_tell_deviceid},
