@@ -18,6 +18,6 @@
 
 : connect "192.168.0.114" "8000" "/" wsconnect . cr ;
 : readmachine id "1" status 0 i2cread 2 jsonencode json wssend . cr ;
-: run i2cinit use adcpiplus connect begin readmachine 1000000 sleep again ;
+: run i2cinit connect begin readmachine 1000000 sleep again ;
 
 run
