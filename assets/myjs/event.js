@@ -57,12 +57,7 @@ function nextStart(time){
 
 function login(){
     $("#signin").fadeIn(500);
-    $(".form-horizontal").animate({marginTop: "20vh"},1000);
-
-	$("button.signin").click(function(){
-	    $("#signin").fadeOut(500);
-    	$(".form-horizontal").animate({marginTop: "0vh"},1000);
-	});
+    $(".form-horizontal").animate({marginTop: "10vh"},1000);
 
 	$(".close").click(function(){
 	    $("#signin").fadeOut(500);
@@ -70,24 +65,24 @@ function login(){
 	});
 }
 
+function loginSuccess(){
+    $("#signin").fadeOut(500);
+	$(".form-horizontal").animate({marginTop: "0vh"},1000);
+}
+
 function loginFail(email, password){
-	if (!email) {
-
-	};
-	if (!email) {
-
+	var message = 'Ooops! Det verkar som att fel lösenord, eller en ogiltig e-mail angivits.';
+	if (!email && !password) {
+		message = 'Ange e-post och lösenord!';
+	}
+	else if (!email) {
+		message = 'Ange e-post!';
+	}
+	else if (!password) {
+		message = 'Ange lösenord!';
 	};	
-    $("#loginfail").fadeIn(500);
-    $("#loginfail").animate({marginTop: "20vh"},1000);
-	$("#loginfail .closemessage").click(function(){
-	    $("#loginfail").fadeOut(500);
-    	$("#loginfail").animate({marginTop: "0vh"},1000);
-	});
-	$("#loginfail .trysignin").click(function(){
-	    $("#loginfail").fadeOut(500);
-    	$("#loginfail").animate({marginTop: "0vh"},1000);
-    	login();
-	});
+	document.getElementById("signin-message").innerHTML = message;
+	login();
 }
 
 function brokenPattern(){
@@ -103,7 +98,11 @@ function correctPattern(){
 }
 
 function send(message){
-		ws.send('{\"pid\" : \"chat\",\"type\" : \"post\",\"values\" : ["' + message + '"]}');
+	if (message == "login"){
+		var password = document.getElementById("inputPassword").value;
+		message += password;
+	} 
+	ws.send('{\"pid\" : \"chat\",\"type\" : \"post\",\"values\" : ["' + message + '"]}');
 }
 
 //login(); 

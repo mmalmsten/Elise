@@ -127,14 +127,8 @@ tracker() :-
 	findall(Starttime,(
 		event(0,Starttime,Message,Endtime),
 		\+(Message == ignore),
-		stamp_date_time(Starttime, date(_, _, _, Eventstarthour, Eventstartminute, _, _, _, _), 'UTC'),
-		stamp_date_time(Endtime, date(_, _, _, Eventendhour, Eventendminute, _, _, _, _), 'UTC'),
-		Startofevent = Eventstarthour * 60 + Eventstartminute, % Start time in minutes since 00.00
-		Endofevent = Eventendhour * 60 + Eventendminute,
-		Nowinminutes = Currenthour * 60 + Currentminute,
-		Nowinminutes > Startofevent,
-		Nowinminutes < Endofevent), % At this time of day the stove is usually on, but since status is zero it is not on now
-		List),
+		checktime(Starttime, Endtime, Currenthour, Currentminute) % At this time of day the stove is usually on, but since status is zero it is not on now
+		), List),
 	length(List,Length),
 	Length > 1,	
 	debug(chat, 'Found ~p events (must be more than 1)', [Length]),
@@ -158,25 +152,10 @@ tracker() :-
 	debug(chat, 'Trackertime ~p', [Timestamp]),
 	stamp_date_time(Timestamp, date(_, _, _, Currenthour, Currentminute, _, _, _, _), 'UTC'),
 	event(0,Starttime,Message,Endtime),
-	\+(Message == ignore) ,
-	format_time(atom(TWN), '%V', Timestamp), % Set week number and check odd/ even
-	atom_number(TWN, Thisweeknumber),
-	format_time(atom(EWD), '%V', Starttime),
-	atom_number(EWD, Eventweeknumber),
-	Evenodd is Thisweeknumber + Eventweeknumber,
-	Evenodd mod 2 =:= 0,
-	format_time(atom(TDW), '%u', Timestamp),
-	atom_number(TDW, Thisdow),
-	format_time(atom(EWD), '%u', Starttime),
-	atom_number(EWD, Eventdow),
-	Thisdow == Eventdow,
-	stamp_date_time(Starttime, date(_, _, _, Eventstarthour, Eventstartminute, _, _, _, _), 'UTC'),
-	stamp_date_time(Endtime, date(_, _, _, Eventendhour, Eventendminute, _, _, _, _), 'UTC'),
-	Startofevent = Eventstarthour * 60 + Eventstartminute,
-	Endofevent = Eventendhour * 60 + Eventendminute,
-	Nowinminutes = Currenthour * 60 + Currentminute,
-	Nowinminutes > Startofevent - 30,
-	Nowinminutes < Endofevent + 30,
+	\+(Message == ignore),
+	checkweeknumber(Timestamp, Starttime),
+	checkdayofweek(Timestamp, Starttime),
+	checktime(Starttime, Endtime, Currenthour, Currentminute),
 	debug(chat, 'This event has happened this time before considering time of day, week number AND weekday', []),
 	alarm(10,tracker(), _Id, [remove(true)]),!.
 
@@ -191,18 +170,8 @@ tracker() :-
 	stamp_date_time(Timestamp, date(_, _, _, Currenthour, Currentminute, _, _, _, _), 'UTC'),
 	event(0,Starttime,Message,Endtime),
 	\+(Message == ignore) ,
-	format_time(atom(A), '%u', Timestamp),
-	atom_number(A, Thisdow),
-	format_time(atom(B), '%u', Starttime),
-	atom_number(B, Eventdow),
-	Thisdow == Eventdow,
-	stamp_date_time(Starttime, date(_, _, _, Eventstarthour, Eventstartminute, _, _, _, _), 'UTC'),
-	stamp_date_time(Endtime, date(_, _, _, Eventendhour, Eventendminute, _, _, _, _), 'UTC'),
-	Startofevent = Eventstarthour * 60 + Eventstartminute,
-	Endofevent = Eventendhour * 60 + Eventendminute,
-	Nowinminutes = Currenthour * 60 + Currentminute,
-	Nowinminutes > Startofevent - 30,
-	Nowinminutes < Endofevent + 30,
+	checkdayofweek(Timestamp, Starttime),
+	checktime(Starttime, Endtime, Currenthour, Currentminute),
 	debug(chat, 'This event has happened this time before considering time of day AND weekday', []),
 	alarm(10,tracker(), _Id, [remove(true)]),!.
 
@@ -217,19 +186,13 @@ tracker() :-
 	stamp_date_time(Timestamp, date(_, _, _, Currenthour, Currentminute, _, _, _, _), 'UTC'),
 	event(0,Starttime,Message,Endtime),
 	\+(Message == ignore) ,
-	stamp_date_time(Starttime, date(_, _, _, Eventstarthour, Eventstartminute, _, _, _, _), 'UTC'),
-	stamp_date_time(Endtime, date(_, _, _, Eventendhour, Eventendminute, _, _, _, _), 'UTC'),
-	Startofevent = Eventstarthour * 60 + Eventstartminute,
-	Endofevent = Eventendhour * 60 + Eventendminute,
-	Nowinminutes = Currenthour * 60 + Currentminute,
-	Nowinminutes > Startofevent - 30,
-	Nowinminutes < Endofevent + 30,
+	checktime(Starttime, Endtime, Currenthour, Currentminute),
 	debug(chat, 'This event has happened this time before considering time of day', []),
 	alarm(10,tracker(), _Id, [remove(true)]),!.
 
 
 
-
+% TODO! Lägg till en findall
 % If the stove is on, calculate if event is at least 50% longer than normal consider time of day, odd/even week AND weekday
 tracker() :-
 	status(1),	
@@ -238,17 +201,8 @@ tracker() :-
 	event(0,Starttime,Oldmessage,Endtime),
 	\+(Thismessage == ignore),
 	\+(Oldmessage == ignore),
-	format_time(atom(TWN), '%V', Currentstarttime), % Set week number and check odd/ even
-	atom_number(TWN, Thisweeknumber),
-	format_time(atom(EWD), '%V', Starttime),
-	atom_number(EWD, Eventweeknumber),
-	Evenodd is Thisweeknumber + Eventweeknumber,
-	Evenodd mod 2 =:= 0,
-	format_time(atom(A), '%u', Currentstarttime),
-	atom_number(A, Thisdow),
-	format_time(atom(B), '%u', Starttime),
-	atom_number(B, Eventdow),
-	Thisdow == Eventdow,
+	checkweeknumber(Currentstarttime, Starttime),
+	checkdayofweek(Currentstarttime, Starttime),
 	Currentsession = Timestamp - Currentstarttime,
 	Eventsession = Endtime - Starttime,
 	Currentsession < Eventsession * 1.5,
@@ -266,11 +220,7 @@ tracker() :-
 	event(0,Starttime,Oldmessage,Endtime),
 	\+(Thismessage == ignore),
 	\+(Oldmessage == ignore),
-	format_time(atom(A), '%u', Currentstarttime),
-	atom_number(A, Thisdow),
-	format_time(atom(B), '%u', Starttime),
-	atom_number(B, Eventdow),
-	Thisdow == Eventdow,
+	checkdayofweek(Currentstarttime, Starttime),
 	Currentsession = Timestamp - Currentstarttime,
 	Eventsession = Endtime - Starttime,
 	Currentsession < Eventsession * 1.5,
@@ -318,6 +268,34 @@ tracker() :-
 	format(atom(Javascript), 'brokenPattern();', []),
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),	
 	alarm(10,tracker(), _Id, [remove(true)]),!.
+
+
+%****************************************************************************************
+% Check time, check week
+%****************************************************************************************
+checktime(Starttime, Endtime, Currenthour, Currentminute) :-
+	stamp_date_time(Starttime, date(_, _, _, Eventstarthour, Eventstartminute, _, _, _, _), 'UTC'),
+	stamp_date_time(Endtime, date(_, _, _, Eventendhour, Eventendminute, _, _, _, _), 'UTC'),
+	Startofevent = Eventstarthour * 60 + Eventstartminute,
+	Endofevent = Eventendhour * 60 + Eventendminute,
+	Nowinminutes = Currenthour * 60 + Currentminute,
+	Nowinminutes > Startofevent - 30,
+	Nowinminutes < Endofevent + 30.
+
+checkweeknumber(Timestamp, Starttime) :-
+	format_time(atom(TWN), '%V', Timestamp), % Set week number and check odd/ even
+	atom_number(TWN, Thisweeknumber),
+	format_time(atom(EWD), '%V', Starttime),
+	atom_number(EWD, Eventweeknumber),
+	Evenodd is Thisweeknumber + Eventweeknumber,
+	Evenodd mod 2 =:= 0.
+
+checkdayofweek(Timestamp, Starttime) :-
+	format_time(atom(TDW), '%u', Timestamp),
+	atom_number(TDW, Thisdow),
+	format_time(atom(EWD), '%u', Starttime),
+	atom_number(EWD, Eventdow),
+	Thisdow == Eventdow.
 
 %****************************************************************************************
 % The time status predicate (recursive), that will be runned every second to update the GUI
@@ -367,9 +345,13 @@ timestatus(Client) :-
 %****************************************************************************************
 
 handle_message(Message, Room) :- 
-	websocket{client:Client,data:Data,format:string,hub:chat,opcode:text} :< Message, !,
+	websocket{client:Client,data:Data,format:string,hub:chat,opcode:text} :< Message,
 	atom_string(Data1,Data),
 	json:atom_json_dict(Data1, Json, []),
+	handle_json_message(Json, Client, Room).
+handle_message(Message, Room) :- 
+	websocket{client:Client,data:Data,format:string,hub:chat,opcode:text} :< Message,
+	json:atom_json_dict(Data, Json, []),
 	handle_json_message(Json, Client, Room).
 handle_message(Message, _Room) :-
 	hub{left:Id} :< Message, !,
@@ -382,9 +364,25 @@ handle_message(Message, _Room) :-
 % Make JSON from message
 %****************************************************************************************
 
-handle_json_message(_{pid:"event",type:"make",values:[]}, Client, _Room) :- % Web page opened
+handle_json_message(_{pid:"event",type:"make",values:[]}, _Client, _Room) :- % Web page opened
+	debug(chat, 'Make recieved.', []),
+	format(atom(Javascript), 'login();', []),
+	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}).
+
+handle_json_message(_{status:Status,id:1992}, _Client, _Room) :- % Connection from Raspberry Pi with id 1
+	debug(chat, 'Connection from Raspberry Pi. ~p', [Status]). 
+
+handle_json_message(_{pid:"chat",type:"post",values:[Input]}, Client, _Room) :- % Successfull sign in
+	Input == "login1992",
 	alarm(1,timestatus(Client), _Id, [remove(true)]),
-	debug(chat, 'Make recieved.', []).
+	format(atom(Javascript), 'loginSuccess();', []),
+	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}).
+
+handle_json_message(_{pid:"chat",type:"post",values:[Input]}, Client, _Room) :- % Sign in fails!!!
+	Input == "login",
+	format(atom(Javascript), 'loginFail();', []),
+	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}).
+
 
 handle_json_message(_{pid:"chat",type:"post",values:[Input]}, Client, Room) :- % Turn off stove
 	Input == "stop",

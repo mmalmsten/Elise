@@ -67,25 +67,19 @@
 		<div id="signin">
 			<div class="form-horizontal">
 				<div class="close"><span class="glyphicon glyphicon-remove" aria-hidden="true"></span></div>
+				<div id="signin-message" class="alert"></div>
 				<div class="form-group">
-					<label for="inputEmail3" class="control-label">E-post</label>
-					<input type="email" class="form-control" id="inputEmail3" placeholder="Email">
+					<label for="inputEmail" class="control-label">E-post</label>
+					<input type="email" class="form-control" id="inputEmail" placeholder="Email">
 				</div>
 				<div class="form-group">
-					<label for="inputPassword3" class="control-label">Lösenord</label>
-					<input type="password" class="form-control" id="inputPassword3" placeholder="Password">
+					<label for="inputPassword" class="control-label">Lösenord</label>
+					<input type="password" class="form-control" id="inputPassword" placeholder="Password">
 				</div>
 				<div class="form-group button">
-					<button type="submit" class="btn btn-primary btn-lg signin">Logga in</button>
+					<button type="submit" class="btn btn-primary btn-lg signin" onclick="send('login');">Logga in</button>
 				</div>
 			</div>
-		</div>
-
-		<div id="loginfail">
-			<div class="closemessage"><span class="glyphicon glyphicon-remove" aria-hidden="true"></span></div>
-			<h1>Ooops!</h1>
-			<p id="message">Det verkar som att fel lösenord, eller en ogiltig e-mail angivits.</p>
-			<button class="btn btn-primary btn-lg trysignin">Prova igen!</button>
 		</div>
 
 		<div id="printmessage">

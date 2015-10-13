@@ -47,15 +47,17 @@ body {
   left: 0;
   height: 100vh;
   width: 100vw;
+  overflow: auto;
   background-color: rgba(255, 255, 255, 0.8);
 }
 #signin .form-horizontal {
   background: #fff;
   width: 90vw;
   max-width: 600px;
-  min-height: 60vh;
+  height: 80vh;
+  overflow: auto;
   margin: 0 auto;
-  margin-top: 10vh;
+  margin-top: 0vh;
   padding: 60px;
   -moz-box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.2);
   -webkit-box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.2);
@@ -80,8 +82,16 @@ body {
   font-size: 2em;
   cursor: pointer;
 }
-#printmessage,
-#loginfail {
+#signin #signin-message {
+  margin: 15px -15px;
+  padding: 5px;
+  font-size: 1.2em;
+  background: #faf7ef;
+  color: #d6bd7b;
+  border: 1px solid #f4eddc;
+  border-radius: 0;
+}
+#printmessage {
   position: relative;
   background: #fff;
   width: 90vw;
@@ -95,25 +105,21 @@ body {
   box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.2);
   display: none;
 }
-#printmessage h1,
-#loginfail h1 {
+#printmessage h1 {
   font-size: 3em;
   font-weight: bold;
   color: #748992;
   text-align: center;
 }
-#printmessage #message,
-#loginfail #message {
+#printmessage #message {
   font-size: 2em;
   color: #748992;
 }
-#printmessage .sign,
-#loginfail .sign {
+#printmessage .sign {
   font-size: 1.5em;
   color: #748992;
 }
-#printmessage .closemessage,
-#loginfail .closemessage {
+#printmessage .closemessage {
   float: right;
   margin-top: -30px;
   margin-bottom: 30px;
