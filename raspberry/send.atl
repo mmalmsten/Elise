@@ -1,0 +1,23 @@
+( jsonencoder )
+
+127 string json
+32 string tmp
+32 string status
+32 string id
+1 constant use
+"status" status strcat
+"id" id strcat
+: printstring "\"" tmp strcat tmp strcat "\"" tmp strcat tmp ;
+: printreal "%.4f" tmp fstrform tmp ;
+: printint "%ld" tmp strform tmp ;
+: realorint 2dup = if printreal else printint then ; 
+: realorstring dup 1000000000 > if printreal else printstring then ; 
+: print dup 1000000 < if realorint else realorstring then ; 
+: jsonencode 0 json c! 0 do 0 tmp c! i 0 = if "{" json strcat else "," json strcat then print swap 
+	"\"" json strcat json strcat "\"" json strcat ":" json strcat json strcat loop "}" json strcat ;
+
+: connect "192.168.0.114" "8000" "/" wsconnect . cr ;
+: readmachine id "1" status 0 getatod 2 jsonencode json wssend . cr ;
+: run use adcpiplus connect begin readmachine 1000000 sleep again ;
+
+run
