@@ -16,7 +16,7 @@
 : jsonencode 0 json c! 0 do 0 tmp c! i 0 = if "{" json strcat else "," json strcat then print swap 
 	"\"" json strcat json strcat "\"" json strcat ":" json strcat json strcat loop "}" json strcat ;
 
-: connect "192.168.0.114" "8000" "/" wsconnect . cr ;
+: connect "192.168.0.75" "8000" "/event" wsconnect . cr ;
 : readmachine id "1" status 0 i2cread 2 jsonencode json wssend . cr ;
 : run i2cinit connect begin readmachine 1000000 sleep again ;
 
