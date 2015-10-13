@@ -33,10 +33,12 @@ function printMessage(data){
 	} else if(data == "correct") {
 		message = "Ooops! Ursäkta att jag störde!"		
 	}
-	$("#message").html(message);
-    $("#printmessage").animate({marginTop: "20vh", opacity: "1"},1000);
-	$(".closemessage").click(function(){
-    	$("#printmessage").animate({marginTop: "100vh", opacity: "0"},1000);
+	$("#printmessage #message").html(message);
+    $("#printmessage").fadeIn(500);
+    $("#printmessage").animate({marginTop: "20vh"},1000);
+	$("#printmessage .closemessage").click(function(){
+	    $("#printmessage").fadeOut(500);
+    	$("#printmessage").animate({marginTop: "0vh"},1000);
 	});
 }
 
@@ -59,12 +61,32 @@ function login(){
 
 	$("button.signin").click(function(){
 	    $("#signin").fadeOut(500);
-    	$(".form-horizontal").animate({marginTop: "100vh"},1000);
+    	$(".form-horizontal").animate({marginTop: "0vh"},1000);
 	});
 
 	$(".close").click(function(){
 	    $("#signin").fadeOut(500);
-    	$(".form-horizontal").animate({marginTop: "100vh"},1000);
+    	$(".form-horizontal").animate({marginTop: "0vh"},1000);
+	});
+}
+
+function loginFail(email, password){
+	if (!email) {
+
+	};
+	if (!email) {
+
+	};	
+    $("#loginfail").fadeIn(500);
+    $("#loginfail").animate({marginTop: "20vh"},1000);
+	$("#loginfail .closemessage").click(function(){
+	    $("#loginfail").fadeOut(500);
+    	$("#loginfail").animate({marginTop: "0vh"},1000);
+	});
+	$("#loginfail .trysignin").click(function(){
+	    $("#loginfail").fadeOut(500);
+    	$("#loginfail").animate({marginTop: "0vh"},1000);
+    	login();
 	});
 }
 

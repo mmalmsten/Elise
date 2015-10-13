@@ -80,7 +80,8 @@ body {
   font-size: 2em;
   cursor: pointer;
 }
-#printmessage {
+#printmessage,
+#loginfail {
   position: relative;
   background: #fff;
   width: 90vw;
@@ -92,23 +93,27 @@ body {
   -moz-box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.2);
   -webkit-box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.2);
   box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.2);
-  opacity: 0;
+  display: none;
 }
-#printmessage h1 {
+#printmessage h1,
+#loginfail h1 {
   font-size: 3em;
   font-weight: bold;
   color: #748992;
   text-align: center;
 }
-#printmessage #message {
+#printmessage #message,
+#loginfail #message {
   font-size: 2em;
   color: #748992;
 }
-#printmessage .sign {
+#printmessage .sign,
+#loginfail .sign {
   font-size: 1.5em;
   color: #748992;
 }
-#printmessage .closemessage {
+#printmessage .closemessage,
+#loginfail .closemessage {
   float: right;
   margin-top: -30px;
   margin-bottom: 30px;
