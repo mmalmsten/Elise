@@ -100,7 +100,3 @@ function send(message){
 	var password = document.getElementById("inputPassword").value;
 	ws.send('{\"pid\" : \"chat\",\"type\" : \"post\",\"values\" : ["' + message + '","' + email +'","' + password +'"]}');
 }
-
-//login(); 
-//brokenPattern();
-//correctPattern();

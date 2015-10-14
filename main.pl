@@ -192,20 +192,22 @@ tracker() :-
 
 
 
-% TODO! Lägg till en findall
 % If the stove is on, calculate if event is at least 50% longer than normal consider time of day, odd/even week AND weekday
 tracker() :-
 	status(1),	
 	get_time(Timestamp),
-	event(1,Currentstarttime,Thismessage,_Endtime),
-	event(0,Starttime,Oldmessage,Endtime),
+	event(1,Currentstarttime,Thismessage,Currentendtime),
 	\+(Thismessage == ignore),
-	\+(Oldmessage == ignore),
-	checkweeknumber(Currentstarttime, Starttime),
-	checkdayofweek(Currentstarttime, Starttime),
-	Currentsession = Timestamp - Currentstarttime,
-	Eventsession = Endtime - Starttime,
-	Currentsession < Eventsession * 1.5,
+	findall(Starttime,(
+		event(0,Starttime,Oldessage,Endtime),
+		\+(Oldmessage == ignore),
+		checkweeknumber(Currentstarttime, Starttime),
+		checkdayofweek(Currentstarttime, Starttime),
+		checktime(Starttime, Endtime, Currentstarttime, Currentendtime),
+		Currentsession = Timestamp - Currentstarttime,
+		Eventsession = Endtime - Starttime,
+		Currentsession < Eventsession * 1.5,
+	), List),
 	debug(chat, 'Not longer time running than normal considering time of day AND weekday', []),
 	alarm(10,tracker(), _Id, [remove(true)]),!.
 
@@ -216,14 +218,17 @@ tracker() :-
 	length(Elist,Length),
 	Length < 40,
 	get_time(Timestamp),
-	event(1,Currentstarttime,Thismessage,_Endtime),
-	event(0,Starttime,Oldmessage,Endtime),
+	event(1,Currentstarttime,Thismessage,Currentendtime),
 	\+(Thismessage == ignore),
-	\+(Oldmessage == ignore),
-	checkdayofweek(Currentstarttime, Starttime),
-	Currentsession = Timestamp - Currentstarttime,
-	Eventsession = Endtime - Starttime,
-	Currentsession < Eventsession * 1.5,
+	findall(Starttime,(
+		event(0,Starttime,Oldessage,Endtime),
+		\+(Oldmessage == ignore),
+		checkdayofweek(Currentstarttime, Starttime),
+		checktime(Starttime, Endtime, Currentstarttime, Currentendtime),
+		Currentsession = Timestamp - Currentstarttime,
+		Eventsession = Endtime - Starttime,
+		Currentsession < Eventsession * 1.5,
+	), List),
 	debug(chat, 'Not longer time running than normal considering time of day AND weekday', []),
 	alarm(10,tracker(), _Id, [remove(true)]),!.
 
@@ -234,13 +239,16 @@ tracker() :-
 	length(Elist,Length),
 	Length < 30,
 	get_time(Timestamp),
-	event(1,Currentstarttime,Thismessage,_Endtime),
-	event(0,Starttime,Oldmessage,Endtime),
+	event(1,Currentstarttime,Thismessage,Currentendtime),
 	\+(Thismessage == ignore),
-	\+(Oldmessage == ignore),
-	Currentsession = Timestamp - Currentstarttime,
-	Eventsession = Endtime - Starttime,
-	Currentsession < Eventsession * 1.5,
+	findall(Starttime,(
+		event(0,Starttime,Oldessage,Endtime),
+		\+(Oldmessage == ignore),
+		checktime(Starttime, Endtime, Currentstarttime, Currentendtime),
+		Currentsession = Timestamp - Currentstarttime,
+		Eventsession = Endtime - Starttime,
+		Currentsession < Eventsession * 1.5,
+	), List),
 	debug(chat, 'Not longer time running than normal considering time of day', []),
 	alarm(10,tracker(), _Id, [remove(true)]),!.
 
@@ -251,13 +259,15 @@ tracker() :-
 	length(Elist,Length),
 	Length < 15,
 	get_time(Timestamp),
-	event(1,Currentstarttime,Thismessage,_Endtime),
-	event(0,Starttime,Oldmessage,Endtime),
+	event(1,Currentstarttime,Thismessage,_Currentendtime),
 	\+(Thismessage == ignore),
-	\+(Oldmessage == ignore),
-	Currentsession = Timestamp - Currentstarttime,
-	Eventsession = Endtime - Starttime,
-	Currentsession < Eventsession * 1.5,
+	findall(Starttime,(
+		event(0,Starttime,Oldessage,Endtime),
+		\+(Oldmessage == ignore),
+		Currentsession = Timestamp - Currentstarttime,
+		Eventsession = Endtime - Starttime,
+		Currentsession < Eventsession * 1.5,
+	), List),
 	debug(chat, 'Not longer time running than normal', []),
 	alarm(10,tracker(), _Id, [remove(true)]),!.
 
