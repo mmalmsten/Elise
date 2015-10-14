@@ -36,7 +36,7 @@ function printMessage(data){
 	$("#printmessage #message").html(message);
     $("#printmessage").fadeIn(500);
     $("#printmessage").animate({marginTop: "20vh"},1000);
-	$("#printmessage .closemessage").click(function(){
+	$("body").click(function(){
 	    $("#printmessage").fadeOut(500);
     	$("#printmessage").animate({marginTop: "0vh"},1000);
 	});
@@ -70,18 +70,13 @@ function loginSuccess(){
 	$(".form-horizontal").animate({marginTop: "0vh"},1000);
 }
 
-function loginFail(email, password){
-	var message = 'Ooops! Det verkar som att fel lösenord, eller en ogiltig e-mail angivits.';
-	if (!email && !password) {
-		message = 'Ange e-post och lösenord!';
-	}
-	else if (!email) {
-		message = 'Ange e-post!';
-	}
-	else if (!password) {
-		message = 'Ange lösenord!';
-	};	
-	document.getElementById("signin-message").innerHTML = message;
+function loginFail(){
+	var text = 'Ooops! Det verkar som att fel lösenord, eller en ogiltig e-mail angivits.';
+	var div = document.createElement('div');
+	div.className = 'alert';
+	div.id = 'signin-message';
+	div.innerHTML = text;
+	document.getElementById("signin-message-placeholder").appendChild(div);
 	login();
 }
 
@@ -89,6 +84,9 @@ function brokenPattern(){
     $(".correct").fadeIn(1000);
     $(".correct .title").animate({marginTop: "0"},1000);
     $('.correct .info .btn').attr("disabled", false);
+	$(".correct button").click(function(){
+	    correctPattern();
+	});    
 }
 
 function correctPattern(){
@@ -98,11 +96,9 @@ function correctPattern(){
 }
 
 function send(message){
-	if (message == "login"){
-		var password = document.getElementById("inputPassword").value;
-		message += password;
-	} 
-	ws.send('{\"pid\" : \"chat\",\"type\" : \"post\",\"values\" : ["' + message + '"]}');
+	var email = document.getElementById("inputEmail").value;
+	var password = document.getElementById("inputPassword").value;
+	ws.send('{\"pid\" : \"chat\",\"type\" : \"post\",\"values\" : ["' + message + '","' + email +'","' + password +'"]}');
 }
 
 //login(); 

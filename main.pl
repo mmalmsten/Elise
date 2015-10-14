@@ -369,23 +369,19 @@ handle_json_message(_{pid:"event",type:"make",values:[]}, _Client, _Room) :- % W
 	format(atom(Javascript), 'login();', []),
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}).
 
-handle_json_message(_{status:Status,id:1992}, _Client, _Room) :- % Connection from Raspberry Pi with id 1
+handle_json_message(_{status:Status,id:1992}, _Client, _Room) :- % Connection from Raspberry Pi with id 1992
 	debug(chat, 'Connection from Raspberry Pi. ~p', [Status]). 
 
-handle_json_message(_{pid:"chat",type:"post",values:[Input]}, Client, _Room) :- % Successfull sign in
-	Input == "login1992",
+handle_json_message(_{pid:"chat",type:"post",values:["login",_Email,"1992"]}, Client, _Room) :- % Successfull sign in
 	alarm(1,timestatus(Client), _Id, [remove(true)]),
 	format(atom(Javascript), 'loginSuccess();', []),
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}).
 
-handle_json_message(_{pid:"chat",type:"post",values:[Input]}, Client, _Room) :- % Sign in fails!!!
-	Input == "login",
+handle_json_message(_{pid:"chat",type:"post",values:["login",_Email,_Pass]}, Client, _Room) :- % Sign in fails!!!
 	format(atom(Javascript), 'loginFail();', []),
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}).
 
-
-handle_json_message(_{pid:"chat",type:"post",values:[Input]}, Client, Room) :- % Turn off stove
-	Input == "stop",
+handle_json_message(_{pid:"chat",type:"post",values:["stop",_Email,"1992"]}, Client, Room) :-
 	Event = event(Status,Oldtime,_Message,Endtime),
 	retract(Event),
 	Updateevent = event(Status,Oldtime,ignore,Endtime),
@@ -395,8 +391,7 @@ handle_json_message(_{pid:"chat",type:"post",values:[Input]}, Client, Room) :- %
 	format(atom(Javascript), 'printMessage("stop");', []),
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),!.
 
-handle_json_message(_{pid:"chat",type:"post",values:[Input]}, Client, _Room) :- % Ignore this event in list
-	Input == "ignore",
+handle_json_message(_{pid:"chat",type:"post",values:["ignore",_Email,"1992"]}, Client, _Room) :-
 	Event = event(Status,Oldtime,_Message,Endtime),
 	retract(Event),
 	Updateevent = event(Status,Oldtime,ignore,Endtime),
@@ -404,8 +399,7 @@ handle_json_message(_{pid:"chat",type:"post",values:[Input]}, Client, _Room) :- 
 	format(atom(Javascript), 'printMessage("ignore");', []),
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),!.
 
-handle_json_message(_{pid:"chat",type:"post",values:[Input]}, Client, _Room) :- % The event is correct
-	Input == "correct",
+handle_json_message(_{pid:"chat",type:"post",values:["correct",_Email,"1992"]}, Client, _Room) :-
 	format(atom(Javascript), 'printMessage("correct");', []),
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),!.
 
