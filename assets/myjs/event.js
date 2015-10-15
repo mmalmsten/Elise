@@ -12,6 +12,7 @@ function ready(){
 			ws.send('{\"pid\" : \"event\",\"type\" : \"make\",\"values\" : []}');
 		};
 		ws.onmessage = function (evt) {
+			console.log(evt.data);
 			if (evt.data) {
 				var str = evt.data;
 				eval(str);

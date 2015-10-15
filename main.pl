@@ -45,7 +45,7 @@ server(Port) :-
 	http_server(http_dispatch, [port(Port)]),
 	init_events("event.pl"),
 	alarm(10,tracker(), _, [remove(true)]),
-	alarm(1,sensorsimulator(), _, [remove(true)]),
+	%alarm(1,sensorsimulator(), _, [remove(true)]),
 	asserta(event(0,0,unknown,0)),
 	asserta(status(0)).
 	
@@ -87,7 +87,7 @@ create_chat_room :-
 
 chatroom(Room) :-
 	thread_get_message(Room.queues.event, Message),
-	debug(chat, 'Got message ~p', [Message]),
+	%debug(chat, 'Got message ~p', [Message]),
 	handle_message(Message, Room),
 	chatroom(Room).
 
@@ -122,7 +122,6 @@ tracker() :-
 tracker() :-
 	status(0),	
 	get_time(Timestamp),
-	debug(chat, 'Trackertime ~p', [Timestamp]),
 	stamp_date_time(Timestamp, date(_, _, _, Currenthour, Currentminute, _, _, _, _), 'UTC'),
 	findall(Starttime,(
 		event(0,Starttime,Message,Endtime),
@@ -131,7 +130,6 @@ tracker() :-
 		), List),
 	length(List,Length),
 	Length > 1,	
-	debug(chat, 'Found ~p events (must be more than 1)', [Length]),
 	format(atom(Javascript), 'brokenPattern();', []),
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),	
 	debug(chat, 'Borde maskinen inte vara på???', []),
@@ -149,7 +147,6 @@ tracker() :-
 tracker() :-
 	status(1),	
 	get_time(Timestamp),
-	debug(chat, 'Trackertime ~p', [Timestamp]),
 	stamp_date_time(Timestamp, date(_, _, _, Currenthour, Currentminute, _, _, _, _), 'UTC'),
 	event(0,Starttime,Message,Endtime),
 	\+(Message == ignore),
@@ -166,7 +163,6 @@ tracker() :-
 	length(Elist,Length),
 	Length < 40,
 	get_time(Timestamp),
-	debug(chat, 'Trackertime ~p', [Timestamp]),
 	stamp_date_time(Timestamp, date(_, _, _, Currenthour, Currentminute, _, _, _, _), 'UTC'),
 	event(0,Starttime,Message,Endtime),
 	\+(Message == ignore) ,
@@ -182,7 +178,6 @@ tracker() :-
 	length(Elist,Length),
 	Length < 25,
 	get_time(Timestamp),
-	debug(chat, 'Trackertime ~p', [Timestamp]),
 	stamp_date_time(Timestamp, date(_, _, _, Currenthour, Currentminute, _, _, _, _), 'UTC'),
 	event(0,Starttime,Message,Endtime),
 	\+(Message == ignore) ,
@@ -199,14 +194,14 @@ tracker() :-
 	event(1,Currentstarttime,Thismessage,Currentendtime),
 	\+(Thismessage == ignore),
 	findall(Starttime,(
-		event(0,Starttime,Oldessage,Endtime),
+		event(0,Starttime,Oldmessage,Endtime),
 		\+(Oldmessage == ignore),
 		checkweeknumber(Currentstarttime, Starttime),
 		checkdayofweek(Currentstarttime, Starttime),
 		checktime(Starttime, Endtime, Currentstarttime, Currentendtime),
 		Currentsession = Timestamp - Currentstarttime,
 		Eventsession = Endtime - Starttime,
-		Currentsession < Eventsession * 1.5,
+		Currentsession < Eventsession * 1.5
 	), List),
 	debug(chat, 'Not longer time running than normal considering time of day AND weekday', []),
 	alarm(10,tracker(), _Id, [remove(true)]),!.
@@ -221,13 +216,13 @@ tracker() :-
 	event(1,Currentstarttime,Thismessage,Currentendtime),
 	\+(Thismessage == ignore),
 	findall(Starttime,(
-		event(0,Starttime,Oldessage,Endtime),
+		event(0,Starttime,Oldmessage,Endtime),
 		\+(Oldmessage == ignore),
 		checkdayofweek(Currentstarttime, Starttime),
 		checktime(Starttime, Endtime, Currentstarttime, Currentendtime),
 		Currentsession = Timestamp - Currentstarttime,
 		Eventsession = Endtime - Starttime,
-		Currentsession < Eventsession * 1.5,
+		Currentsession < Eventsession * 1.5
 	), List),
 	debug(chat, 'Not longer time running than normal considering time of day AND weekday', []),
 	alarm(10,tracker(), _Id, [remove(true)]),!.
@@ -242,12 +237,12 @@ tracker() :-
 	event(1,Currentstarttime,Thismessage,Currentendtime),
 	\+(Thismessage == ignore),
 	findall(Starttime,(
-		event(0,Starttime,Oldessage,Endtime),
+		event(0,Starttime,Oldmessage,Endtime),
 		\+(Oldmessage == ignore),
 		checktime(Starttime, Endtime, Currentstarttime, Currentendtime),
 		Currentsession = Timestamp - Currentstarttime,
 		Eventsession = Endtime - Starttime,
-		Currentsession < Eventsession * 1.5,
+		Currentsession < Eventsession * 1.5
 	), List),
 	debug(chat, 'Not longer time running than normal considering time of day', []),
 	alarm(10,tracker(), _Id, [remove(true)]),!.
@@ -262,11 +257,11 @@ tracker() :-
 	event(1,Currentstarttime,Thismessage,_Currentendtime),
 	\+(Thismessage == ignore),
 	findall(Starttime,(
-		event(0,Starttime,Oldessage,Endtime),
+		event(0,Starttime,Oldmessage,Endtime),
 		\+(Oldmessage == ignore),
 		Currentsession = Timestamp - Currentstarttime,
 		Eventsession = Endtime - Starttime,
-		Currentsession < Eventsession * 1.5,
+		Currentsession < Eventsession * 1.5
 	), List),
 	debug(chat, 'Not longer time running than normal', []),
 	alarm(10,tracker(), _Id, [remove(true)]),!.
@@ -314,7 +309,7 @@ checkdayofweek(Timestamp, Starttime) :-
 timestatus(Client) :-
 	status(0),
 	get_time(Now),
-	debug(chat, 'Time status 0', []),
+	debug(chat, 'timestatus 0', []),
 	setof(Seconds,(
 		event(0,Starttime,Message,_Endtime),
 		\+(Message == ignore),
@@ -326,7 +321,6 @@ timestatus(Client) :-
 		Seconds is Eventseconds - Nowseconds
 	), List),
 	length(List,Length),
-	debug(chat, 'Length is ~p', [Length]),	
 	reverse(List,List1),
 	[Head|_Tail] = List1,
     format(atom(Javascript), 'nextStart("~f")', [Head]),
@@ -336,7 +330,7 @@ timestatus(Client) :-
 timestatus(Client) :-
 	status(1),
 	get_time(Now), 
-	debug(chat, 'Time status 1', []),
+	debug(chat, 'timestatus 1', []),
 	event(_Status,Oldtime,_Message,_),
 	Timestamp is Now - Oldtime, 
 	stamp_date_time(Timestamp, date(_, _, _, H, M, S, _, _, _), 'UTC'),
@@ -376,11 +370,24 @@ handle_message(Message, _Room) :-
 
 handle_json_message(_{pid:"event",type:"make",values:[]}, _Client, _Room) :- % Web page opened
 	debug(chat, 'Make recieved.', []),
+	%alarm(1,timestatus(Client), _Id, [remove(true)]), %%%%%
 	format(atom(Javascript), 'login();', []),
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}).
 
-handle_json_message(_{status:Status,id:1992}, _Client, _Room) :- % Connection from Raspberry Pi with id 1992
-	debug(chat, 'Connection from Raspberry Pi. ~p', [Status]). 
+handle_json_message(_{status:0,id:Id}, _Client, _Room) :- % Connection from Raspberry Pi 
+	retractall(status(_)),
+	asserta(status(0)),
+	event(Eventint1,_,_,_),
+	assertevents(0,Eventint1),
+	debug(chat, 'Connection from Raspberry Pi. 0 ~p ~p', [0,Eventint1]). 
+
+handle_json_message(_{status:_Status,id:Id}, _Client, _Room) :- % Connection from Raspberry Pi 
+	debug(chat, 'Status 1 from pi', []),
+	retractall(status(_)),
+	asserta(status(1)),
+	event(Eventint1,_,_,_),
+	assertevents(1,Eventint1),
+	debug(chat, 'Connection from Raspberry Pi. ~p ~p', [1,Eventint1]). 
 
 handle_json_message(_{pid:"chat",type:"post",values:["login",_Email,"1992"]}, Client, _Room) :- % Successfull sign in
 	alarm(1,timestatus(Client), _Id, [remove(true)]),
@@ -420,32 +427,28 @@ handle_json_message(_, _, _) :-
 % Add event to event clauses list (in event.pl) if status have changed
 %****************************************************************************************
 
-assertevents(Eventint,Eventint) :-
-	debug(chat, 'Same as before', []).
+assertevents(Eventint,Eventint).
 
 assertevents(1, _Eventint) :-
-		debug(chat, 'New eventint where status is 1', []),
+		debug(chat, 'assertevents status 1', []),
 		get_time(Timestamp),
 		Evt = event(1,Timestamp,unknown,0),
-		debug(chat, 'Starttime ~p', [Timestamp]),
 		asserta(Evt).
 		
 assertevents(0, _Eventint) :-
-		debug(chat, 'New eventint where status is 0', []),
+		debug(chat, 'assertevents status 0', []),
 		Event = event(1,Oldtime,Message,0),
 		retract(Event),
 		get_time(Timestamp),
 		Updateevent = event(0,Oldtime,Message,Timestamp),
-		debug(chat, 'Starttime ~p', [Oldtime]),
-		debug(chat, 'Endtime ~p', [Timestamp]),
-		asserta(Updateevent).
-		%open('event.pl', append, Stream),
-		%write(Stream, Updateevent),
-		%write(Stream, '.'),
-		%nl(Stream),
-		%flush_output(Stream),
-		%debug(chat, 'Closing ~p', [Stream]),
-		%close(Stream).
+		asserta(Updateevent),
+		open('event.pl', append, Stream),
+		write(Stream, Updateevent),
+		write(Stream, '.'),
+		nl(Stream),
+		flush_output(Stream),
+		debug(chat, 'Closing ~p', [Stream]),
+		close(Stream).
 		
 %****************************************************************************************
 % Read events from file
