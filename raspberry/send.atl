@@ -4,6 +4,8 @@
 32 string tmp
 32 string status
 32 string id
+127 string raw
+
 1 constant use
 "status" status strcat
 "id" id strcat
@@ -15,9 +17,10 @@
 : print dup 1000000 < if realorint else realorstring then ; 
 : jsonencode 0 json c! 0 do 0 tmp c! i 0 = if "{" json strcat else "," json strcat then print swap 
 	"\"" json strcat json strcat "\"" json strcat ":" json strcat json strcat loop "}" json strcat ;
-: connect "192.168.0.75" "8000" "/event" wsconnect . cr ;
+: connect "192.168.0.4" "8000" "/event" wsconnect . cr ;
 : readmachine id 1992 status 0 i2cread 2 jsonencode json wssend . cr ;
-: run i2cinit connect begin readmachine 1000000 sleep again ;
+: fromelise "$" strchar 0 <> if 2 telloff then ;
+: run i2cinit connect begin readmachine raw 127 1000 wsrec drop raw dup type fromelise 1000000 sleep again ;
 
 run
 

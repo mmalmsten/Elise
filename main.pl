@@ -45,7 +45,7 @@ server(Port) :-
 	http_server(http_dispatch, [port(Port)]),
 	init_events("event.pl"),
 	alarm(10,tracker(), _, [remove(true)]),
-	%alarm(1,sensorsimulator(), _, [remove(true)]),
+	alarm(1,sensorsimulator(), _, [remove(true)]),
 	asserta(event(0,0,unknown,0)),
 	asserta(status(0)).
 	
@@ -403,7 +403,7 @@ handle_json_message(_{pid:"chat",type:"post",values:["stop",_Email,"1992"]}, Cli
 	retract(Event),
 	Updateevent = event(Status,Oldtime,ignore,Endtime),
 	asserta(Updateevent),
-	format(atom(Json), '{command : stop}', []),
+	format(atom(Json), '$', []), % Send a $ to Raspberry Pi
 	hub_broadcast(Room.name, websocket{client:Client,data:Json,format:string,hub:chat,opcode:text}),
 	format(atom(Javascript), 'printMessage("stop");', []),
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),!.
