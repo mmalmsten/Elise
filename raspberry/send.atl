@@ -19,7 +19,7 @@
 	"\"" json strcat json strcat "\"" json strcat ":" json strcat json strcat loop "}" json strcat ;
 : connect "192.168.0.4" "8000" "/event" wsconnect . cr ;
 : readmachine id 1992 status 0 i2cread 2 jsonencode json wssend . cr ;
-: fromelise "$" strchar 0 <> if 2 telloff then ;
+: fromelise dup "$" strchar 0 <> if 2 telloff then "€" strchar 0 <> if 2 tellon then ;
 : run i2cinit connect begin readmachine raw 127 1000 wsrec drop raw dup type fromelise 1000000 sleep again ;
 
 run

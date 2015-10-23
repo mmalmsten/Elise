@@ -47,14 +47,6 @@ function zeroPad(num) {
   var zero = 2 - num.toString().length + 1;
   return Array(+(zero > 0 && zero)).join("0") + num;
 }
-function nextStart(time){
-	var hours = Math.floor(time / 3600);
-	time = time - hours * 3600;
-	var minutes = Math.floor(time / 60);
-	var seconds = (time - minutes * 60).toFixed();
-	var finalTime = zeroPad(hours)+":"+zeroPad(minutes)+":"+zeroPad(seconds);
-	document.getElementById("info").innerHTML = finalTime;
-}
 
 function login(){
     $("#signin").fadeIn(500);
@@ -72,6 +64,7 @@ function loginSuccess(){
 }
 
 function loginFail(){
+	$("#signin-message").remove();
 	var text = 'Ooops! Det verkar som att fel lösenord, eller en ogiltig e-mail angivits.';
 	var div = document.createElement('div');
 	div.className = 'alert';

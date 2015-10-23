@@ -5,6 +5,7 @@
 !.gitignore
 !main.pl
 !event.pl
+!email.pl
 !assets/
 !documentation/
 !raspberry/

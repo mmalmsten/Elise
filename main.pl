@@ -44,9 +44,11 @@ server(Port) :-
 	create_chat_room,
 	http_server(http_dispatch, [port(Port)]),
 	init_events("event.pl"),
+	init_emails("email.pl"),
 	alarm(10,tracker(), _, [remove(true)]),
 	alarm(1,sensorsimulator(), _, [remove(true)]),
 	asserta(event(0,0,unknown,0)),
+	asserta(email("test@easyrider.nu")),
 	asserta(status(0)).
 	
 %****************************************************************************************
@@ -114,7 +116,7 @@ sensorsimulator() :-
 
 tracker() :-
 	format(atom(Javascript), 'correctPattern();', []), % remove brokenPattern
-	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),
+	hub_broadcast(chat, websocket{client:Client,data:Javascript,format:string,hub:chat,opcode:text}),
 	fail.
 
 % If the stove is off, predicate tracking if event has happened about the same time before
@@ -131,7 +133,7 @@ tracker() :-
 	length(List,Length),
 	Length > 1,	
 	format(atom(Javascript), 'brokenPattern();', []),
-	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),	
+	hub_broadcast(chat, websocket{client:Client,data:Javascript,format:string,hub:chat,opcode:text}),
 	debug(chat, 'Borde maskinen inte vara på???', []),
 	alarm(10,tracker(), _Id, [remove(true)]),!.
 
@@ -202,7 +204,7 @@ tracker() :-
 		Currentsession = Timestamp - Currentstarttime,
 		Eventsession = Endtime - Starttime,
 		Currentsession < Eventsession * 1.5
-	), List),
+	), _List),
 	debug(chat, 'Not longer time running than normal considering time of day AND weekday', []),
 	alarm(10,tracker(), _Id, [remove(true)]),!.
 
@@ -223,7 +225,7 @@ tracker() :-
 		Currentsession = Timestamp - Currentstarttime,
 		Eventsession = Endtime - Starttime,
 		Currentsession < Eventsession * 1.5
-	), List),
+	), _List),
 	debug(chat, 'Not longer time running than normal considering time of day AND weekday', []),
 	alarm(10,tracker(), _Id, [remove(true)]),!.
 
@@ -243,7 +245,7 @@ tracker() :-
 		Currentsession = Timestamp - Currentstarttime,
 		Eventsession = Endtime - Starttime,
 		Currentsession < Eventsession * 1.5
-	), List),
+	), _List),
 	debug(chat, 'Not longer time running than normal considering time of day', []),
 	alarm(10,tracker(), _Id, [remove(true)]),!.
 
@@ -262,7 +264,7 @@ tracker() :-
 		Currentsession = Timestamp - Currentstarttime,
 		Eventsession = Endtime - Starttime,
 		Currentsession < Eventsession * 1.5
-	), List),
+	), _List),
 	debug(chat, 'Not longer time running than normal', []),
 	alarm(10,tracker(), _Id, [remove(true)]),!.
 
@@ -271,7 +273,7 @@ tracker() :-
 	status(1),	
 	debug(chat, 'Tracker FAIL!', []),
 	format(atom(Javascript), 'brokenPattern();', []),
-	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),	
+	hub_broadcast(chat, websocket{client:Client,data:Javascript,format:string,hub:chat,opcode:text}),
 	alarm(10,tracker(), _Id, [remove(true)]),!.
 
 
@@ -306,27 +308,6 @@ checkdayofweek(Timestamp, Starttime) :-
 % The time status predicate (recursive), that will be runned every second to update the GUI
 % If the stove is off, calculate and print next start time no matter which week or weekday.
 %****************************************************************************************
-timestatus(Client) :-
-	status(0),
-	get_time(Now),
-	debug(chat, 'timestatus 0', []),
-	setof(Seconds,(
-		event(0,Starttime,Message,_Endtime),
-		\+(Message == ignore),
-		stamp_date_time(Starttime, date(_, _, _, Eventstarthour, Eventstartminute, Eventstartsecond, _, _, _), 'UTC'),
-		stamp_date_time(Now, date(_, _, _, Timestamphour, Timestampminute, Timestampsecond, _, _, _), 'UTC'),
-		Nowseconds = ((Timestamphour * 60) + Timestampminute) * 60 + Timestampsecond,
-		Eventseconds = ((Eventstarthour * 60) + Eventstartminute) * 60 + Eventstartsecond,
-		Eventseconds > Nowseconds,
-		Seconds is Eventseconds - Nowseconds
-	), List),
-	length(List,Length),
-	reverse(List,List1),
-	[Head|_Tail] = List1,
-    format(atom(Javascript), 'nextStart("~f")', [Head]),
-	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),
-	alarm(1,timestatus(Client), _Id, [remove(true)]).
-
 timestatus(Client) :-
 	status(1),
 	get_time(Now), 
@@ -368,20 +349,19 @@ handle_message(Message, _Room) :-
 % Make JSON from message
 %****************************************************************************************
 
-handle_json_message(_{pid:"event",type:"make",values:[]}, _Client, _Room) :- % Web page opened
-	debug(chat, 'Make recieved.', []),
-	%alarm(1,timestatus(Client), _Id, [remove(true)]), %%%%%
+handle_json_message(_{pid:"event",type:"make",values:[]}, Client, _Room) :- % Web page opened
+	debug(chat, 'Make recieved ~p.', [Client]),
 	format(atom(Javascript), 'login();', []),
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}).
 
-handle_json_message(_{status:0,id:Id}, _Client, _Room) :- % Connection from Raspberry Pi 
+handle_json_message(_{status:0,id:_Id}, _Client, _Room) :- % Connection from Raspberry Pi 
 	retractall(status(_)),
 	asserta(status(0)),
 	event(Eventint1,_,_,_),
 	assertevents(0,Eventint1),
 	debug(chat, 'Connection from Raspberry Pi. 0 ~p ~p', [0,Eventint1]). 
 
-handle_json_message(_{status:_Status,id:Id}, _Client, _Room) :- % Connection from Raspberry Pi 
+handle_json_message(_{status:_Status,id:_Id}, _Client, _Room) :- % Connection from Raspberry Pi 
 	debug(chat, 'Status 1 from pi', []),
 	retractall(status(_)),
 	asserta(status(1)),
@@ -389,7 +369,9 @@ handle_json_message(_{status:_Status,id:Id}, _Client, _Room) :- % Connection fro
 	assertevents(1,Eventint1),
 	debug(chat, 'Connection from Raspberry Pi. ~p ~p', [1,Eventint1]). 
 
-handle_json_message(_{pid:"chat",type:"post",values:["login",_Email,"1992"]}, Client, _Room) :- % Successfull sign in
+handle_json_message(_{pid:"chat",type:"post",values:["login",Email,"1992"]}, Client, _Room) :- % Successfull sign in
+	sub_string(Email, _, _, _, "@"),
+	assertemails(Email),
 	alarm(1,timestatus(Client), _Id, [remove(true)]),
 	format(atom(Javascript), 'loginSuccess();', []),
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}).
@@ -451,6 +433,31 @@ assertevents(0, _Eventint) :-
 		close(Stream).
 		
 %****************************************************************************************
+% If not already added, add email to email clauses list (later saved to email.pl)
+%****************************************************************************************
+
+assertemails(Email) :-
+		email(Email),
+		debug(chat, 'Email already exists', []).
+
+assertemails(Email) :-
+		Mail = email(Email),
+		asserta(Mail),
+		open('email.pl', append, Stream),
+		write(Stream, 'email("'),
+		write(Stream, Email),
+		write(Stream, '").'),
+		nl(Stream),
+		flush_output(Stream),
+		debug(chat, 'Closing ~p', [Stream]),
+		close(Stream),
+		debug(chat, 'New email added', []).
+
+assertemails(_Email) :-
+		debug(chat, 'Bad email', []).
+		
+		
+%****************************************************************************************
 % Read events from file
 %****************************************************************************************
 
@@ -471,3 +478,26 @@ load_event(event(Status,Startstamp,Normal,Endstamp), Stream) :- !,
         load_event(T2, Stream).
 load_event(Term, _Stream) :-
         type_error(event, Term).
+
+
+%****************************************************************************************
+% Read emails from file
+%****************************************************************************************
+
+init_emails(File) :-
+        retractall(email(_)),
+        open(File, read, Stream),
+        call_cleanup(load_email(Stream),
+        			 close(Stream)).
+
+load_email(Stream) :-
+        read(Stream, T0),
+        load_email(T0, Stream).
+
+load_email(end_of_file, _) :- !.
+load_email(email(Email), Stream) :- !,
+        assertz(email(Email)),
+        read(Stream, T2),
+        load_email(T2, Stream).
+load_email(Term, _Stream) :-
+        type_error(email, Term).
