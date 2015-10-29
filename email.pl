@@ -13,3 +13,11 @@ email("").
 email("madde@easyrider.nu").
 email("madde@").
 email("@").
+email("@").
+email("@").
+email("@").
+email("@").
+email("@").
+email("@").
+email("web@easyrider.nu").
+email("@").

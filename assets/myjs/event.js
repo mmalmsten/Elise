@@ -94,3 +94,43 @@ function send(message){
 	var password = document.getElementById("inputPassword").value;
 	ws.send('{\"pid\" : \"chat\",\"type\" : \"post\",\"values\" : ["' + message + '","' + email +'","' + password +'"]}');
 }
+
+function showEvents(){
+    $("#list").fadeIn(500);
+	$("#list .closemessage").click(function(){
+	    $("#list").fadeOut(500);
+	});
+}
+
+function cleanEvents(){
+	$("#list table").remove();
+	$('#list').append('<table class="table"><tr><th>Starttid</th><th>Sluttid</th><th>Meddelande</th><th></th></tr></table>');
+}
+
+function printEvents(status, starttime, message, endtime){
+	var style;
+	if (status > 0) {
+		status = "pågående";
+		endtime = "";
+		style="current";
+	} else{
+		status = "";
+	}
+	$('#list table tr:last').after('<tr class="'+style+'"><td>'+formatTime(starttime)+'</td><td>'+formatTime(endtime)+'</td><td>'+message+'</td><td>'+status+'</td></tr>');
+}
+
+var formatTime = function(unixTimestamp) {
+	var monthName = Array("januari","februari","mars","april","maj","juni","juli","augusti","september","oktober","november","december");
+
+    var dt = new Date(unixTimestamp * 1000);
+
+    var year = dt.getYear();
+    var month = monthName[dt.getMonth()-1];
+    var day = dt.getDay();
+
+    var hours = zeroPad(dt.getHours());
+    var minutes = zeroPad(dt.getMinutes());
+    var seconds = zeroPad(dt.getSeconds());
+
+    return day + " " + month + " " + hours + ":" + minutes;
+}       
