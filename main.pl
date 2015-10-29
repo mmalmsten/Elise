@@ -49,7 +49,8 @@ server(Port) :-
 	alarm(1,sensorsimulator(), _, [remove(true)]),
 	asserta(event(0,0,unknown,0)),
 	asserta(email("test@easyrider.nu")),
-	asserta(status(0)).
+	asserta(status(0)),
+	asserta(currentclient(none)).
 	
 %****************************************************************************************
 %	Debug. (Restart Prolog after being used)
@@ -115,8 +116,10 @@ sensorsimulator() :-
 %****************************************************************************************
 
 tracker() :-
+	alarm(10,tracker(), _Id, [remove(true)]),
 	format(atom(Javascript), 'correctPattern();', []), % remove brokenPattern
-	hub_broadcast(chat, websocket{client:Client,data:Javascript,format:string,hub:chat,opcode:text}),
+	currentclient(Client),
+	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),
 	fail.
 
 % If the stove is off, predicate tracking if event has happened about the same time before
@@ -133,15 +136,14 @@ tracker() :-
 	length(List,Length),
 	Length > 1,	
 	format(atom(Javascript), 'brokenPattern();', []),
-	hub_broadcast(chat, websocket{client:Client,data:Javascript,format:string,hub:chat,opcode:text}),
-	debug(chat, 'Borde maskinen inte vara på???', []),
-	alarm(10,tracker(), _Id, [remove(true)]),!.
+	currentclient(Client),
+	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),
+	debug(chat, 'Borde maskinen inte vara på???', []),!.
 
 % All good
 tracker() :-
 	status(0),	
-	debug(chat, 'All good', []),
-	alarm(10,tracker(), _Id, [remove(true)]),!.
+	debug(chat, 'All good', []),!.
 
 
 % If the stove is on, predicate tracking if event
@@ -155,37 +157,30 @@ tracker() :-
 	checkweeknumber(Timestamp, Starttime),
 	checkdayofweek(Timestamp, Starttime),
 	checktime(Starttime, Endtime, Currenthour, Currentminute),
-	debug(chat, 'This event has happened this time before considering time of day, week number AND weekday', []),
-	alarm(10,tracker(), _Id, [remove(true)]),!.
+	debug(chat, 'This event has happened this time before considering time of day, week number AND weekday', []),!.
 
 % Same as above, but do NOT consider week number
 tracker() :-
 	status(1),	
-	findall(Starttime,event(0,Starttime,_Message,_Endtime),Elist),
-	length(Elist,Length),
-	Length < 40,
+	numberofeventclauses(40), % Check if number of events is more than I
 	get_time(Timestamp),
 	stamp_date_time(Timestamp, date(_, _, _, Currenthour, Currentminute, _, _, _, _), 'UTC'),
 	event(0,Starttime,Message,Endtime),
 	\+(Message == ignore) ,
 	checkdayofweek(Timestamp, Starttime),
 	checktime(Starttime, Endtime, Currenthour, Currentminute),
-	debug(chat, 'This event has happened this time before considering time of day AND weekday', []),
-	alarm(10,tracker(), _Id, [remove(true)]),!.
+	debug(chat, 'This event has happened this time before considering time of day AND weekday', []),!.
 
 % Same as above, but do NOT consider week number OR weekday
 tracker() :-
 	status(1),
-	findall(Starttime,event(0,Starttime,_Message,_Endtime),Elist),
-	length(Elist,Length),
-	Length < 25,
+	numberofeventclauses(25), % Check if number of events is more than I
 	get_time(Timestamp),
 	stamp_date_time(Timestamp, date(_, _, _, Currenthour, Currentminute, _, _, _, _), 'UTC'),
 	event(0,Starttime,Message,Endtime),
 	\+(Message == ignore) ,
 	checktime(Starttime, Endtime, Currenthour, Currentminute),
-	debug(chat, 'This event has happened this time before considering time of day', []),
-	alarm(10,tracker(), _Id, [remove(true)]),!.
+	debug(chat, 'This event has happened this time before considering time of day', []),!.
 
 
 
@@ -197,84 +192,62 @@ tracker() :-
 	\+(Thismessage == ignore),
 	findall(Starttime,(
 		event(0,Starttime,Oldmessage,Endtime),
-		\+(Oldmessage == ignore),
+		trackertimelength(Oldmessage,Timestamp,Starttime,Endtime,Currentstarttime),
 		checkweeknumber(Currentstarttime, Starttime),
 		checkdayofweek(Currentstarttime, Starttime),
-		checktime(Starttime, Endtime, Currentstarttime, Currentendtime),
-		Currentsession = Timestamp - Currentstarttime,
-		Eventsession = Endtime - Starttime,
-		Currentsession < Eventsession * 1.5
+		checktime(Starttime, Endtime, Currentstarttime, Currentendtime)
 	), _List),
-	debug(chat, 'Not longer time running than normal considering time of day AND weekday', []),
-	alarm(10,tracker(), _Id, [remove(true)]),!.
+	debug(chat, 'Not longer time running than normal considering time of day AND weekday', []),!.
 
 % Same as above, but do NOT consider odd/even week
 tracker() :-
 	status(1),	
-	findall(Starttime,event(0,Starttime,_,_),Elist),
-	length(Elist,Length),
-	Length < 40,
+	numberofeventclauses(40), % Check if number of events is more than I
 	get_time(Timestamp),
 	event(1,Currentstarttime,Thismessage,Currentendtime),
 	\+(Thismessage == ignore),
 	findall(Starttime,(
 		event(0,Starttime,Oldmessage,Endtime),
-		\+(Oldmessage == ignore),
+		trackertimelength(Oldmessage,Timestamp,Starttime,Endtime,Currentstarttime),
 		checkdayofweek(Currentstarttime, Starttime),
-		checktime(Starttime, Endtime, Currentstarttime, Currentendtime),
-		Currentsession = Timestamp - Currentstarttime,
-		Eventsession = Endtime - Starttime,
-		Currentsession < Eventsession * 1.5
+		checktime(Starttime, Endtime, Currentstarttime, Currentendtime)
 	), _List),
-	debug(chat, 'Not longer time running than normal considering time of day AND weekday', []),
-	alarm(10,tracker(), _Id, [remove(true)]),!.
+	debug(chat, 'Not longer time running than normal considering time of day AND weekday', []),!.
 
 % Same as above, but do NOT consider odd/even week OR weekday
 tracker() :-
 	status(1),	
-	findall(Starttime,event(0,Starttime,_,_),Elist),
-	length(Elist,Length),
-	Length < 30,
+	numberofeventclauses(30), % Check if number of events is more than I
 	get_time(Timestamp),
 	event(1,Currentstarttime,Thismessage,Currentendtime),
 	\+(Thismessage == ignore),
 	findall(Starttime,(
 		event(0,Starttime,Oldmessage,Endtime),
-		\+(Oldmessage == ignore),
-		checktime(Starttime, Endtime, Currentstarttime, Currentendtime),
-		Currentsession = Timestamp - Currentstarttime,
-		Eventsession = Endtime - Starttime,
-		Currentsession < Eventsession * 1.5
+		trackertimelength(Oldmessage,Timestamp,Starttime,Endtime,Currentstarttime),
+		checktime(Starttime, Endtime, Currentstarttime, Currentendtime)
 	), _List),
-	debug(chat, 'Not longer time running than normal considering time of day', []),
-	alarm(10,tracker(), _Id, [remove(true)]),!.
+	debug(chat, 'Not longer time running than normal considering time of day', []),!.
 
 % Same as above, but do NOT consider weekday, odd/even week OR time
 tracker() :-
 	status(1),	
-	findall(Starttime,event(0,Starttime,_,_),Elist),
-	length(Elist,Length),
-	Length < 15,
+	numberofeventclauses(15), % Check if number of events is more than I
 	get_time(Timestamp),
 	event(1,Currentstarttime,Thismessage,_Currentendtime),
 	\+(Thismessage == ignore),
 	findall(Starttime,(
 		event(0,Starttime,Oldmessage,Endtime),
-		\+(Oldmessage == ignore),
-		Currentsession = Timestamp - Currentstarttime,
-		Eventsession = Endtime - Starttime,
-		Currentsession < Eventsession * 1.5
+		trackertimelength(Oldmessage,Timestamp,Starttime,Endtime,Currentstarttime)
 	), _List),
-	debug(chat, 'Not longer time running than normal', []),
-	alarm(10,tracker(), _Id, [remove(true)]),!.
+	debug(chat, 'Not longer time running than normal', []),!.
 
 % Fail backtracking
 tracker() :-
 	status(1),	
 	debug(chat, 'Tracker FAIL!', []),
 	format(atom(Javascript), 'brokenPattern();', []),
-	hub_broadcast(chat, websocket{client:Client,data:Javascript,format:string,hub:chat,opcode:text}),
-	alarm(10,tracker(), _Id, [remove(true)]),!.
+	currentclient(Client),
+	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),!.
 
 
 %****************************************************************************************
@@ -305,25 +278,42 @@ checkdayofweek(Timestamp, Starttime) :-
 	Thisdow == Eventdow.
 
 %****************************************************************************************
+% Additional predicates to tracker
+%****************************************************************************************
+trackertimelength(Oldmessage,Timestamp,Starttime,Endtime,Currentstarttime) :-
+	\+(Oldmessage == ignore),
+	Currentsession = Timestamp - Currentstarttime,
+	Eventsession = Endtime - Starttime,
+	Currentsession < Eventsession * 1.5.
+
+numberofeventclauses(I) :-
+	findall(Starttime,event(0,Starttime,_Message,_Endtime),Elist),
+	length(Elist,Length),
+	Length < I.
+
+
+
+%****************************************************************************************
 % The time status predicate (recursive), that will be runned every second to update the GUI
 % If the stove is off, calculate and print next start time no matter which week or weekday.
 %****************************************************************************************
+
+timestatus(Client) :-
+	alarm(1,timestatus(Client), _Id, [remove(true)]),
+	fail.
+
 timestatus(Client) :-
 	status(1),
 	get_time(Now), 
-	debug(chat, 'timestatus 1', []),
 	event(_Status,Oldtime,_Message,_),
 	Timestamp is Now - Oldtime, 
 	stamp_date_time(Timestamp, date(_, _, _, H, M, S, _, _, _), 'UTC'),
     format(atom(Javascript), 'document.getElementById("info").innerHTML = "~|~`0t~d~2+:~|~`0t~d~2+:~|~`0t~0f~2+";', [H,M,S]),
-	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),
-	alarm(1,timestatus(Client), _Id, [remove(true)]).
+	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}).
 
 timestatus(Client) :-
-	debug(chat, 'Time status fails', []),
     format(atom(Javascript), 'document.getElementById("info").innerHTML = "00:00:00";', []),
-	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),
-	alarm(1,timestatus(Client), _Id, [remove(true)]).
+	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}).
 
 %****************************************************************************************
 % Get message from GUI
@@ -338,6 +328,9 @@ handle_message(Message, Room) :-
 	websocket{client:Client,data:Data,format:string,hub:chat,opcode:text} :< Message,
 	json:atom_json_dict(Data, Json, []),
 	handle_json_message(Json, Client, Room).
+handle_message(Message, _Room) :-
+	hub{joined:Id} :< Message, !,
+	assertz(visitor(Id)).
 handle_message(Message, _Room) :-
 	hub{left:Id} :< Message, !,
 	retractall(visitor(Id)).
@@ -374,7 +367,9 @@ handle_json_message(_{pid:"chat",type:"post",values:["login",Email,"1992"]}, Cli
 	assertemails(Email),
 	alarm(1,timestatus(Client), _Id, [remove(true)]),
 	format(atom(Javascript), 'loginSuccess();', []),
-	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}).
+	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),
+	asserta(currentclient(Client)),
+	assertevents(0,0).
 
 handle_json_message(_{pid:"chat",type:"post",values:["login",_Email,_Pass]}, Client, _Room) :- % Sign in fails!!!
 	format(atom(Javascript), 'loginFail();', []),
@@ -401,13 +396,38 @@ handle_json_message(_{pid:"chat",type:"post",values:["ignore",_Email,"1992"]}, C
 handle_json_message(_{pid:"chat",type:"post",values:["correct",_Email,"1992"]}, Client, _Room) :-
 	format(atom(Javascript), 'printMessage("correct");', []),
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),!.
+	
+handle_json_message(_{pid:"chat",type:"post",values:["list",_Email,"1992"]}, Client, _Room) :-
+	format_events(1).
 
 handle_json_message(_, _, _) :-
 	debug(chat, 'Ooops', []).
 
 %****************************************************************************************
+% Send all event clauses to GUI as Javascript
+%****************************************************************************************
+
+format_events(I) :-
+	I < 10,
+	nth_clause(event(_,_,_,_), I, Ref),
+	clause(event(Status,Starttime,Message,Endtime), _, Ref),
+	format(atom(Javascript), 'printEvents("~p","~p","~p","~p");', [Status,Starttime,Message,Endtime]),
+	hub_broadcast(chat, websocket{client:Client,data:Javascript,format:string,hub:chat,opcode:text}),
+	I1 is I + 1,
+	format_events(I1).
+
+format_events(_) :-!.
+
+%****************************************************************************************
 % Add event to event clauses list (in event.pl) if status have changed
 %****************************************************************************************
+
+assertevents(_,_) :-
+		format(atom(Javascript), 'cleanEvents();', []),
+		currentclient(Client),
+		hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),
+		format_events(1),
+		fail.
 
 assertevents(Eventint,Eventint).
 
@@ -429,9 +449,8 @@ assertevents(0, _Eventint) :-
 		write(Stream, '.'),
 		nl(Stream),
 		flush_output(Stream),
-		debug(chat, 'Closing ~p', [Stream]),
 		close(Stream).
-		
+	
 %****************************************************************************************
 % If not already added, add email to email clauses list (later saved to email.pl)
 %****************************************************************************************
@@ -500,4 +519,4 @@ load_email(email(Email), Stream) :- !,
         read(Stream, T2),
         load_email(T2, Stream).
 load_email(Term, _Stream) :-
-        type_error(email, Term).
+        type_error(email, Term). 
