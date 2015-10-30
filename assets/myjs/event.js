@@ -33,6 +33,8 @@ function printMessage(data){
 		message = "Den här händelsen ignoreras vid framtida beräkningar."
 	} else if(data == "correct") {
 		message = "Ooops! Ursäkta att jag störde!"		
+	} else if(data == "eventadded") {
+		message = "Det nya eventet är tillagt i databasen."		
 	}
 	$("#printmessage #message").html(message);
     $("#printmessage").fadeIn(500);
@@ -93,6 +95,26 @@ function send(message){
 	var email = document.getElementById("inputEmail").value;
 	var password = document.getElementById("inputPassword").value;
 	ws.send('{\"pid\" : \"chat\",\"type\" : \"post\",\"values\" : ["' + message + '","' + email +'","' + password +'"]}');
+}
+
+function addEvent(){
+    $("#create").fadeIn(500);
+    $(".form-horizontal").animate({marginTop: "10vh"},1000);
+
+	$("#create .close").click(function(){
+	    $("#create").fadeOut(500);
+    	$(".form-horizontal").animate({marginTop: "0vh"},1000);
+	});
+
+	$("#create .signin").click(function(){
+		var startTime = document.getElementById("createstarttime").value;
+		var endTime = document.getElementById("createendtime").value;
+		var email = document.getElementById("inputEmail").value;
+		var password = document.getElementById("inputPassword").value;
+		ws.send('{\"pid\" : \"chat\",\"type\" : \"post\",\"values\" : ["addevent","' + startTime + '","' + endTime + '","' + email +'","' + password +'"]}');
+	    $("#create").fadeOut(500);
+    	$(".form-horizontal").animate({marginTop: "0vh"},1000);
+	});
 }
 
 function showEvents(){

@@ -105,8 +105,27 @@
 			<table class="table"><tr><th>Hej</th></tr><tr class="current"><td>hej</td></tr><tr><td>hej</td></tr></table>
 		</div>
 
+		<div id="create">
+			<div class="form-horizontal">
+				<div class="close"><span class="glyphicon glyphicon-remove" aria-hidden="true"></span></div>
+				<div id="signin-message-placeholder"></div>
+				<div class="form-group">
+					<label for="createstarttime" class="control-label">Starttid</label>
+					<input type="text" class="form-control" id="createstarttime" placeholder="Starttid">
+				</div>
+				<div class="form-group">
+					<label for="createendtime" class="control-label">Sluttid</label>
+					<input type="text" class="form-control" id="createendtime" placeholder="Sluttid">
+				</div>
+				<div class="form-group button">
+					<button type="submit" class="btn btn-primary btn-lg signin" onclick="send('login');">Lägg till</button>
+				</div>
+			</div>
+		</div>
+
 		<div id="buttons">
-			<button type="submit" class="btn btn-primary btn-lg signin" onclick="send('list');showEvents();">Lista</button>
+			<button type="submit" class="btn btn-primary btn-lg" onclick="addEvent();">Nytt event</button>
+			<button type="submit" class="btn btn-primary btn-lg" onclick="send('list');showEvents();">Lista</button>
 		</div>
 
 		<script src="myjs/jquery.min.js" type="text/javascript"></script>

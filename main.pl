@@ -375,6 +375,13 @@ handle_json_message(_{pid:"chat",type:"post",values:["login",_Email,_Pass]}, Cli
 	format(atom(Javascript), 'loginFail();', []),
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}).
 
+handle_json_message(_{pid:"chat",type:"post",values:["addevent",Starttime,Endtime,_Email,"1992"]}, Client, _Room) :- % Manually add new event
+	number_string(Start, Starttime),
+	number_string(End, Endtime),
+	asserta(event(0,Start,unknown,End)),
+	format(atom(Javascript), 'printMessage("eventadded");', []),
+	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}).
+
 handle_json_message(_{pid:"chat",type:"post",values:["stop",_Email,"1992"]}, Client, Room) :-
 	Event = event(Status,Oldtime,_Message,Endtime),
 	retract(Event),
@@ -519,4 +526,4 @@ load_email(email(Email), Stream) :- !,
         read(Stream, T2),
         load_email(T2, Stream).
 load_email(Term, _Stream) :-
-        type_error(email, Term). 
+        type_error(email, Term).
