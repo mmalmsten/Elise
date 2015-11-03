@@ -23,6 +23,7 @@
 :- use_module(library(http/json_convert)).
 :- use_module(library(debug)).
 :- use_module(library(http/http_files)).
+:- use_module(library(smtp)).
 
 :- use_module(hub).
 :- use_module(library(threadutil)).
@@ -46,9 +47,10 @@ server(Port) :-
 	init_events("event.pl"),
 	init_emails("email.pl"),
 	alarm(10,tracker(), _, [remove(true)]),
-	alarm(1,sensorsimulator(), _, [remove(true)]),
+	alarm(1,sensor_simulator(), _, [remove(true)]),
 	asserta(event(0,0,unknown,0)),
-	asserta(email("test@easyrider.nu")),
+	asserta(email('web@easyrider.nu',1,authenticated)),
+	asserta(pass("1992")),
 	asserta(status(0)),
 	asserta(currentclient(none)).
 	
@@ -62,24 +64,21 @@ server(Port) :-
 %:- http_handler(root(.), serve_files, [prefix]).
 :- http_handler(root(.), http_reply_from_files('assets', []), [prefix]).
 :- http_handler(root(event),
-		http_upgrade_to_websocket(
-		    accept_chat,
-		    [ guarded(false),
-		      subprotocols([chat])
-		    ]),
-		[ id(chat_websocket)
-		]).
-
+	http_upgrade_to_websocket(
+		accept_chat,
+		[ guarded(false),
+		  subprotocols([chat])
+		]),
+	[ id(chat_websocket)
+	]).
 
 serve_files(Request) :-
-	 http_reply_from_files('assets', [], Request).
+	http_reply_from_files('assets', [], Request).
 serve_files(Request) :-
-	  http_404([], Request).
-
+	http_404([], Request).
 
 accept_chat(WebSocket) :-
 	hub_add(chat, WebSocket, _Id).
-
 
 :- dynamic
 	visitor/1.
@@ -100,14 +99,14 @@ chatroom(Room) :-
 % Sensor simulator
 %****************************************************************************************
 
-sensorsimulator() :-
+sensor_simulator() :-
 	X is random(2),
 	debug(chat, 'Simulator says ~p', [X]),
 	retractall(status(_)),
 	asserta(status(X)),
 	event(Eventint1,_,_,_),
-	assertevents(X,Eventint1),
-	alarm(10,sensorsimulator(), _Id, [remove(true)]).
+	assert_events(X,Eventint1),
+	alarm(10,sensor_simulator(), _Id, [remove(true)]).
 
 %****************************************************************************************
 % Tracker
@@ -131,7 +130,8 @@ tracker() :-
 	findall(Starttime,(
 		event(0,Starttime,Message,Endtime),
 		\+(Message == ignore),
-		checktime(Starttime, Endtime, Currenthour, Currentminute) % At this time of day the stove is usually on, but since status is zero it is not on now
+		check_if_old(Starttime),
+		check_time(Starttime, Endtime, Currenthour, Currentminute) % At this time of day the stove is usually on, but since status is zero it is not on now
 		), List),
 	length(List,Length),
 	Length > 1,	
@@ -154,32 +154,35 @@ tracker() :-
 	stamp_date_time(Timestamp, date(_, _, _, Currenthour, Currentminute, _, _, _, _), 'UTC'),
 	event(0,Starttime,Message,Endtime),
 	\+(Message == ignore),
-	checkweeknumber(Timestamp, Starttime),
-	checkdayofweek(Timestamp, Starttime),
-	checktime(Starttime, Endtime, Currenthour, Currentminute),
+	check_if_old(Starttime),
+	check_week_number(Timestamp, Starttime),
+	check_day_of_week(Timestamp, Starttime),
+	check_time(Starttime, Endtime, Currenthour, Currentminute),
 	debug(chat, 'This event has happened this time before considering time of day, week number AND weekday', []),!.
 
 % Same as above, but do NOT consider week number
 tracker() :-
 	status(1),	
-	numberofeventclauses(40), % Check if number of events is more than I
+	number_of_event_clauses(40), % Check if number of events is more than I
 	get_time(Timestamp),
 	stamp_date_time(Timestamp, date(_, _, _, Currenthour, Currentminute, _, _, _, _), 'UTC'),
 	event(0,Starttime,Message,Endtime),
 	\+(Message == ignore) ,
-	checkdayofweek(Timestamp, Starttime),
-	checktime(Starttime, Endtime, Currenthour, Currentminute),
+	check_if_old(Starttime),
+	check_day_of_week(Timestamp, Starttime),
+	check_time(Starttime, Endtime, Currenthour, Currentminute),
 	debug(chat, 'This event has happened this time before considering time of day AND weekday', []),!.
 
 % Same as above, but do NOT consider week number OR weekday
 tracker() :-
 	status(1),
-	numberofeventclauses(25), % Check if number of events is more than I
+	number_of_event_clauses(25), % Check if number of events is more than I
 	get_time(Timestamp),
 	stamp_date_time(Timestamp, date(_, _, _, Currenthour, Currentminute, _, _, _, _), 'UTC'),
 	event(0,Starttime,Message,Endtime),
 	\+(Message == ignore) ,
-	checktime(Starttime, Endtime, Currenthour, Currentminute),
+	check_if_old(Starttime),
+	check_time(Starttime, Endtime, Currenthour, Currentminute),
 	debug(chat, 'This event has happened this time before considering time of day', []),!.
 
 
@@ -192,52 +195,56 @@ tracker() :-
 	\+(Thismessage == ignore),
 	findall(Starttime,(
 		event(0,Starttime,Oldmessage,Endtime),
-		trackertimelength(Oldmessage,Timestamp,Starttime,Endtime,Currentstarttime),
-		checkweeknumber(Currentstarttime, Starttime),
-		checkdayofweek(Currentstarttime, Starttime),
-		checktime(Starttime, Endtime, Currentstarttime, Currentendtime)
+		check_if_old(Starttime),
+		tracker_time_length(Oldmessage,Timestamp,Starttime,Endtime,Currentstarttime),
+		check_week_number(Currentstarttime, Starttime),
+		check_day_of_week(Currentstarttime, Starttime),
+		check_time(Starttime, Endtime, Currentstarttime, Currentendtime)
 	), _List),
 	debug(chat, 'Not longer time running than normal considering time of day AND weekday', []),!.
 
 % Same as above, but do NOT consider odd/even week
 tracker() :-
 	status(1),	
-	numberofeventclauses(40), % Check if number of events is more than I
+	number_of_event_clauses(40), % Check if number of events is more than I
 	get_time(Timestamp),
 	event(1,Currentstarttime,Thismessage,Currentendtime),
 	\+(Thismessage == ignore),
 	findall(Starttime,(
 		event(0,Starttime,Oldmessage,Endtime),
-		trackertimelength(Oldmessage,Timestamp,Starttime,Endtime,Currentstarttime),
-		checkdayofweek(Currentstarttime, Starttime),
-		checktime(Starttime, Endtime, Currentstarttime, Currentendtime)
+		check_if_old(Starttime),
+		tracker_time_length(Oldmessage,Timestamp,Starttime,Endtime,Currentstarttime),
+		check_day_of_week(Currentstarttime, Starttime),
+		check_time(Starttime, Endtime, Currentstarttime, Currentendtime)
 	), _List),
 	debug(chat, 'Not longer time running than normal considering time of day AND weekday', []),!.
 
 % Same as above, but do NOT consider odd/even week OR weekday
 tracker() :-
 	status(1),	
-	numberofeventclauses(30), % Check if number of events is more than I
+	number_of_event_clauses(30), % Check if number of events is more than I
 	get_time(Timestamp),
 	event(1,Currentstarttime,Thismessage,Currentendtime),
 	\+(Thismessage == ignore),
 	findall(Starttime,(
 		event(0,Starttime,Oldmessage,Endtime),
-		trackertimelength(Oldmessage,Timestamp,Starttime,Endtime,Currentstarttime),
-		checktime(Starttime, Endtime, Currentstarttime, Currentendtime)
+		check_if_old(Starttime),
+		tracker_time_length(Oldmessage,Timestamp,Starttime,Endtime,Currentstarttime),
+		check_time(Starttime, Endtime, Currentstarttime, Currentendtime)
 	), _List),
 	debug(chat, 'Not longer time running than normal considering time of day', []),!.
 
 % Same as above, but do NOT consider weekday, odd/even week OR time
 tracker() :-
 	status(1),	
-	numberofeventclauses(15), % Check if number of events is more than I
+	number_of_event_clauses(15), % Check if number of events is more than I
 	get_time(Timestamp),
 	event(1,Currentstarttime,Thismessage,_Currentendtime),
 	\+(Thismessage == ignore),
 	findall(Starttime,(
 		event(0,Starttime,Oldmessage,Endtime),
-		trackertimelength(Oldmessage,Timestamp,Starttime,Endtime,Currentstarttime)
+		check_if_old(Starttime),
+		tracker_time_length(Oldmessage,Timestamp,Starttime,Endtime,Currentstarttime)
 	), _List),
 	debug(chat, 'Not longer time running than normal', []),!.
 
@@ -253,7 +260,11 @@ tracker() :-
 %****************************************************************************************
 % Check time, check week
 %****************************************************************************************
-checktime(Starttime, Endtime, Currenthour, Currentminute) :-
+check_if_old(Timestamp) :- % Make sure event is not older than two months
+	get_time(X),
+	X - 5184000 > Timestamp.
+
+check_time(Starttime, Endtime, Currenthour, Currentminute) :-
 	stamp_date_time(Starttime, date(_, _, _, Eventstarthour, Eventstartminute, _, _, _, _), 'UTC'),
 	stamp_date_time(Endtime, date(_, _, _, Eventendhour, Eventendminute, _, _, _, _), 'UTC'),
 	Startofevent = Eventstarthour * 60 + Eventstartminute,
@@ -262,7 +273,7 @@ checktime(Starttime, Endtime, Currenthour, Currentminute) :-
 	Nowinminutes > Startofevent - 30,
 	Nowinminutes < Endofevent + 30.
 
-checkweeknumber(Timestamp, Starttime) :-
+check_week_number(Timestamp, Starttime) :-
 	format_time(atom(TWN), '%V', Timestamp), % Set week number and check odd/ even
 	atom_number(TWN, Thisweeknumber),
 	format_time(atom(EWD), '%V', Starttime),
@@ -270,7 +281,7 @@ checkweeknumber(Timestamp, Starttime) :-
 	Evenodd is Thisweeknumber + Eventweeknumber,
 	Evenodd mod 2 =:= 0.
 
-checkdayofweek(Timestamp, Starttime) :-
+check_day_of_week(Timestamp, Starttime) :-
 	format_time(atom(TDW), '%u', Timestamp),
 	atom_number(TDW, Thisdow),
 	format_time(atom(EWD), '%u', Starttime),
@@ -280,29 +291,27 @@ checkdayofweek(Timestamp, Starttime) :-
 %****************************************************************************************
 % Additional predicates to tracker
 %****************************************************************************************
-trackertimelength(Oldmessage,Timestamp,Starttime,Endtime,Currentstarttime) :-
+tracker_time_length(Oldmessage,Timestamp,Starttime,Endtime,Currentstarttime) :-
 	\+(Oldmessage == ignore),
 	Currentsession = Timestamp - Currentstarttime,
 	Eventsession = Endtime - Starttime,
 	Currentsession < Eventsession * 1.5.
 
-numberofeventclauses(I) :-
+number_of_event_clauses(I) :-
 	findall(Starttime,event(0,Starttime,_Message,_Endtime),Elist),
 	length(Elist,Length),
 	Length < I.
-
-
 
 %****************************************************************************************
 % The time status predicate (recursive), that will be runned every second to update the GUI
 % If the stove is off, calculate and print next start time no matter which week or weekday.
 %****************************************************************************************
 
-timestatus(Client) :-
-	alarm(1,timestatus(Client), _Id, [remove(true)]),
+time_status(Client) :-
+	alarm(1,time_status(Client), _Id, [remove(true)]),
 	fail.
 
-timestatus(Client) :-
+time_status(Client) :-
 	status(1),
 	get_time(Now), 
 	event(_Status,Oldtime,_Message,_),
@@ -311,7 +320,7 @@ timestatus(Client) :-
     format(atom(Javascript), 'document.getElementById("info").innerHTML = "~|~`0t~d~2+:~|~`0t~d~2+:~|~`0t~0f~2+";', [H,M,S]),
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}).
 
-timestatus(Client) :-
+time_status(Client) :-
     format(atom(Javascript), 'document.getElementById("info").innerHTML = "00:00:00";', []),
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}).
 
@@ -351,7 +360,7 @@ handle_json_message(_{status:0,id:_Id}, _Client, _Room) :- % Connection from Ras
 	retractall(status(_)),
 	asserta(status(0)),
 	event(Eventint1,_,_,_),
-	assertevents(0,Eventint1),
+	assert_events(0,Eventint1),
 	debug(chat, 'Connection from Raspberry Pi. 0 ~p ~p', [0,Eventint1]). 
 
 handle_json_message(_{status:_Status,id:_Id}, _Client, _Room) :- % Connection from Raspberry Pi 
@@ -359,30 +368,57 @@ handle_json_message(_{status:_Status,id:_Id}, _Client, _Room) :- % Connection fr
 	retractall(status(_)),
 	asserta(status(1)),
 	event(Eventint1,_,_,_),
-	assertevents(1,Eventint1),
+	assert_events(1,Eventint1),
 	debug(chat, 'Connection from Raspberry Pi. ~p ~p', [1,Eventint1]). 
 
-handle_json_message(_{pid:"chat",type:"post",values:["login",Email,"1992"]}, Client, _Room) :- % Successfull sign in
-	sub_string(Email, _, _, _, "@"),
-	assertemails(Email),
-	alarm(1,timestatus(Client), _Id, [remove(true)]),
+handle_json_message(_{pid:"chat",type:"post",values:["login",Email,Pwd]}, Client, _Room) :- % Successfull sign in
+	pass(Pwd),
+	email(Email,_,authenticated),
+	alarm(1,time_status(Client), _Id, [remove(true)]),
 	format(atom(Javascript), 'loginSuccess();', []),
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),
 	asserta(currentclient(Client)),
-	assertevents(0,0).
+	format_events(1).
+	
+handle_json_message(_{pid:"chat",type:"post",values:["login",Email,Pwd]}, Client, _Room) :- % Please authenticate
+	pass(Pwd),
+	sub_string(Email, _, _, _, "@"),
+	assert_emails(Email),
+	format(atom(Javascript), 'loginFail("auth");', []),
+	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}). 
 
 handle_json_message(_{pid:"chat",type:"post",values:["login",_Email,_Pass]}, Client, _Room) :- % Sign in fails!!!
-	format(atom(Javascript), 'loginFail();', []),
+	format(atom(Javascript), 'loginFail("bad");', []),
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}).
 
-handle_json_message(_{pid:"chat",type:"post",values:["addevent",Starttime,Endtime,_Email,"1992"]}, Client, _Room) :- % Manually add new event
+handle_json_message(_{pid:"chat",type:"post",values:["auth",Strhash]}, Client, _Room) :- % Authentification message
+	number_codes(Hash, Strhash),
+	Auth = email(Email,Hash,_),
+	retract(Auth),
+	Updateauth = email(Email,Hash,authenticated),
+	asserta(Updateauth),
+	open('email.pl', append, Stream),
+	write(Stream, "email('"),
+	write(Stream, Email),
+	write(Stream, "',"),
+	write(Stream, Hash),
+	write(Stream, ',authenticated).'),
+	nl(Stream),
+	flush_output(Stream),
+	debug(chat, 'Closing ~p', [Stream]),
+	close(Stream),
+	debug(chat, 'Authentification updated', []). 
+
+handle_json_message(_{pid:"chat",type:"post",values:["addevent",Starttime,Endtime,_Email,Pwd]}, Client, _Room) :- % Manually add new event
+	pass(Pwd),
 	number_string(Start, Starttime),
 	number_string(End, Endtime),
 	asserta(event(0,Start,unknown,End)),
 	format(atom(Javascript), 'printMessage("eventadded");', []),
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}).
 
-handle_json_message(_{pid:"chat",type:"post",values:["stop",_Email,"1992"]}, Client, Room) :-
+handle_json_message(_{pid:"chat",type:"post",values:["stop",_Email,Pwd]}, Client, Room) :-
+	pass(Pwd),
 	Event = event(Status,Oldtime,_Message,Endtime),
 	retract(Event),
 	Updateevent = event(Status,Oldtime,ignore,Endtime),
@@ -392,7 +428,8 @@ handle_json_message(_{pid:"chat",type:"post",values:["stop",_Email,"1992"]}, Cli
 	format(atom(Javascript), 'printMessage("stop");', []),
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),!.
 
-handle_json_message(_{pid:"chat",type:"post",values:["ignore",_Email,"1992"]}, Client, _Room) :-
+handle_json_message(_{pid:"chat",type:"post",values:["ignore",_Email,Pwd]}, Client, _Room) :-
+	pass(Pwd),
 	Event = event(Status,Oldtime,_Message,Endtime),
 	retract(Event),
 	Updateevent = event(Status,Oldtime,ignore,Endtime),
@@ -400,12 +437,10 @@ handle_json_message(_{pid:"chat",type:"post",values:["ignore",_Email,"1992"]}, C
 	format(atom(Javascript), 'printMessage("ignore");', []),
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),!.
 
-handle_json_message(_{pid:"chat",type:"post",values:["correct",_Email,"1992"]}, Client, _Room) :-
+handle_json_message(_{pid:"chat",type:"post",values:["correct",_Email,Pwd]}, Client, _Room) :-
+	pass(Pwd),
 	format(atom(Javascript), 'printMessage("correct");', []),
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),!.
-	
-handle_json_message(_{pid:"chat",type:"post",values:["list",_Email,"1992"]}, Client, _Room) :-
-	format_events(1).
 
 handle_json_message(_, _, _) :-
 	debug(chat, 'Ooops', []).
@@ -415,95 +450,111 @@ handle_json_message(_, _, _) :-
 %****************************************************************************************
 
 format_events(I) :-
+	format(atom(Javascript), 'cleanEvents();', []),
+	hub_broadcast(chat, websocket{client:Client,data:Javascript,format:string,hub:chat,opcode:text}),!,
+	print_events(I).
+
+print_events(I) :-
 	I < 10,
 	nth_clause(event(_,_,_,_), I, Ref),
 	clause(event(Status,Starttime,Message,Endtime), _, Ref),
 	format(atom(Javascript), 'printEvents("~p","~p","~p","~p");', [Status,Starttime,Message,Endtime]),
 	hub_broadcast(chat, websocket{client:Client,data:Javascript,format:string,hub:chat,opcode:text}),
 	I1 is I + 1,
-	format_events(I1).
+	print_events(I1).
 
-format_events(_) :-!.
+print_events(_) :-!.
 
 %****************************************************************************************
 % Add event to event clauses list (in event.pl) if status have changed
 %****************************************************************************************
 
-assertevents(_,_) :-
-		format(atom(Javascript), 'cleanEvents();', []),
-		currentclient(Client),
-		hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),
-		format_events(1),
-		fail.
+assert_events(Eventint,Eventint).
 
-assertevents(Eventint,Eventint).
-
-assertevents(1, _Eventint) :-
-		debug(chat, 'assertevents status 1', []),
-		get_time(Timestamp),
-		Evt = event(1,Timestamp,unknown,0),
-		asserta(Evt).
+assert_events(1, _Eventint) :-
+	debug(chat, 'assert_events status 1', []),
+	get_time(Timestamp),
+	Evt = event(1,Timestamp,unknown,0),
+	asserta(Evt),
+	format_events(1).
 		
-assertevents(0, _Eventint) :-
-		debug(chat, 'assertevents status 0', []),
-		Event = event(1,Oldtime,Message,0),
-		retract(Event),
-		get_time(Timestamp),
-		Updateevent = event(0,Oldtime,Message,Timestamp),
-		asserta(Updateevent),
-		open('event.pl', append, Stream),
-		write(Stream, Updateevent),
-		write(Stream, '.'),
-		nl(Stream),
-		flush_output(Stream),
-		close(Stream).
+assert_events(0, _Eventint) :-
+	debug(chat, 'assert_events status 0', []),
+	Event = event(1,Oldtime,Message,0),
+	retract(Event),
+	get_time(Timestamp),
+	Updateevent = event(0,Oldtime,Message,Timestamp),
+	asserta(Updateevent),
+	open('event.pl', append, Stream),
+	write(Stream, Updateevent),
+	write(Stream, '.'),
+	nl(Stream),
+	flush_output(Stream),
+	close(Stream),
+	format_events(1).
 	
 %****************************************************************************************
 % If not already added, add email to email clauses list (later saved to email.pl)
 %****************************************************************************************
 
-assertemails(Email) :-
-		email(Email),
-		debug(chat, 'Email already exists', []).
+assert_emails(Checkemail) :-
+	email(Email,Hash,_),
+	Checkemail == Email,
+	send_email(Email),
+	debug(chat, 'Email already exists and authentication email has been sent', []).
 
-assertemails(Email) :-
-		Mail = email(Email),
-		asserta(Mail),
-		open('email.pl', append, Stream),
-		write(Stream, 'email("'),
-		write(Stream, Email),
-		write(Stream, '").'),
-		nl(Stream),
-		flush_output(Stream),
-		debug(chat, 'Closing ~p', [Stream]),
-		close(Stream),
-		debug(chat, 'New email added', []).
+assert_emails(Email) :-
+	term_hash(Email, Hash),
+	Mail = email(Email,Hash,unauthenticated),
+	asserta(Mail),
+	send_email(Email),
+	debug(chat, 'New email added and authentication email has been sent', []).
 
-assertemails(_Email) :-
-		debug(chat, 'Bad email', []).
-		
-		
+assert_emails(_Email) :-
+	debug(chat, 'Bad email', []).
+        		
+%****************************************************************************************
+% Send authentication email
+%****************************************************************************************
+
+send_email(Email) :-
+	smtp_send_mail(Email,send_message,[smtp('192.168.0.3'),security(none),header(from('Elise')),
+		auth_method(plain),subject('authentication'),from('elise@easyrider.nu'),content_type('text/html')]).
+
+send_email(Email,_) :-
+	debug(chat, 'Problem sending email to ~p', [Email]).
+
+send_message(Out) :-
+		email(Email,Hash,_),
+		debug(chat, 'Auth email to ~p is as follows: ~a', [Email,Hash]),
+        format(Out, '<h1>Hi!</h1>', []),
+        format(Out, '<a href="http://localhost:8000/?auth=~a">Click link</a>,<p>\n', [Hash]),
+        format(Out, 'Cheers, Elise\n', []).
+        
+        
 %****************************************************************************************
 % Read events from file
 %****************************************************************************************
 
 init_events(File) :-
-        retractall(event(_,_,_,_)),
-        open(File, read, Stream),
-        call_cleanup(load_event(Stream),
-                     close(Stream)).
+	retractall(event(_,_,_,_)),
+	open(File, read, Stream),
+	call_cleanup(load_event(Stream),
+	close(Stream)).
 
 load_event(Stream) :-
-        read(Stream, T0),
-        load_event(T0, Stream).
+	read(Stream, T0),
+	load_event(T0, Stream).
 
 load_event(end_of_file, _) :- !.
+
 load_event(event(Status,Startstamp,Normal,Endstamp), Stream) :- !,
-        assertz(event(Status,Startstamp,Normal,Endstamp)),
-        read(Stream, T2),
-        load_event(T2, Stream).
+	assertz(event(Status,Startstamp,Normal,Endstamp)),
+	read(Stream, T2),
+	load_event(T2, Stream).
+	
 load_event(Term, _Stream) :-
-        type_error(event, Term).
+	type_error(event, Term).
 
 
 %****************************************************************************************
@@ -511,19 +562,21 @@ load_event(Term, _Stream) :-
 %****************************************************************************************
 
 init_emails(File) :-
-        retractall(email(_)),
-        open(File, read, Stream),
-        call_cleanup(load_email(Stream),
-        			 close(Stream)).
+	retractall(email(_,_,_)),
+	open(File, read, Stream),
+	call_cleanup(load_email(Stream),
+	close(Stream)).
 
 load_email(Stream) :-
-        read(Stream, T0),
-        load_email(T0, Stream).
+	read(Stream, T0),
+	load_email(T0, Stream).
 
 load_email(end_of_file, _) :- !.
-load_email(email(Email), Stream) :- !,
-        assertz(email(Email)),
-        read(Stream, T2),
-        load_email(T2, Stream).
+
+load_email(email(Email,_,_), Stream) :- !,
+	assertz(email(Email,_,_)),
+	read(Stream, T2),
+	load_email(T2, Stream).
+	
 load_email(Term, _Stream) :-
-        type_error(email, Term).
+	type_error(email, Term). 

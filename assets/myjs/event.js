@@ -65,11 +65,16 @@ function loginSuccess(){
 	$(".form-horizontal").animate({marginTop: "0vh"},1000);
 }
 
-function loginFail(){
+function loginFail(msg){
 	$("#signin-message").remove();
-	var text = 'Ooops! Det verkar som att fel lösenord, eller en ogiltig e-mail angivits.';
 	var div = document.createElement('div');
-	div.className = 'alert';
+	if (msg === "auth") {
+		var text = 'Hej där! Ett mail har skickats till dig! :)';
+		div.className = 'success';
+	} else{
+		var text = 'Ooops! Det verkar som att fel lösenord, eller en ogiltig e-mail angivits.';
+		div.className = 'alert';
+	}
 	div.id = 'signin-message';
 	div.innerHTML = text;
 	document.getElementById("signin-message-placeholder").appendChild(div);
@@ -111,10 +116,15 @@ function addEvent(){
 		var endTime = document.getElementById("createendtime").value;
 		var email = document.getElementById("inputEmail").value;
 		var password = document.getElementById("inputPassword").value;
-		ws.send('{\"pid\" : \"chat\",\"type\" : \"post\",\"values\" : ["addevent","' + startTime + '","' + endTime + '","' + email +'","' + password +'"]}');
+		ws.send('{\"pid\" : \"chat\",\"type\" : \"post\",\"values\" : ["addevent","' + dateToTimestamp(startTime) + '","' + dateToTimestamp(endTime) + '","' + email +'","' + password +'"]}');
 	    $("#create").fadeOut(500);
     	$(".form-horizontal").animate({marginTop: "0vh"},1000);
 	});
+}
+
+function dateToTimestamp(date){
+	var date = new Date(date);
+	return (date.getTime() / 1000);
 }
 
 function showEvents(){
@@ -147,7 +157,7 @@ var formatTime = function(unixTimestamp) {
     var dt = new Date(unixTimestamp * 1000);
 
     var year = dt.getYear();
-    var month = monthName[dt.getMonth()-1];
+    var month = monthName[dt.getMonth()];
     var day = dt.getDay();
 
     var hours = zeroPad(dt.getHours());
@@ -155,4 +165,11 @@ var formatTime = function(unixTimestamp) {
     var seconds = zeroPad(dt.getSeconds());
 
     return day + " " + month + " " + hours + ":" + minutes;
-}       
+}        
+
+function getParameterByName(name) {
+    name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
+    var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"),
+        results = regex.exec(location.search);
+    return results === null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
+}
