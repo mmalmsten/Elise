@@ -23,7 +23,7 @@
 		<link href="mycss/ionicons.css" rel="stylesheet" media="screen">
 
 	</head>
-	<body onload="ready()">
+	<body>
 
 		<div class="background row">
 			<div class="polygon-img" style="background-image: url(img/1.png);"></div>
@@ -53,13 +53,13 @@
 				<span class="lead">Det verkar som att mönstret har brutits? Stämmer detta?</span>
 			</div>
 			<div class="info">
-				<button value="stop" onclick="send('stop');" class="btn btn-danger btn-lg" disabled>
+				<button value="stop" id="stop" class="btn btn-danger btn-lg action-btn" disabled>
 					Stäng av spisen!
 				</button>
-				<button value="correct" onclick="send('correct');" class="btn btn-primary btn-lg" disabled>
+				<button value="correct" id="correct" class="btn btn-primary btn-lg action-btn" disabled>
 					Ja
 				</button>
-				<button value="ignore" onclick="send('ignore');" class="btn btn-primary btn-lg" disabled>
+				<button value="ignore" id="ignore" class="btn btn-primary btn-lg action-btn" disabled>
 					Nej
 				</button>
 			</div>
@@ -78,7 +78,7 @@
 					<input type="password" class="form-control" id="inputPassword" placeholder="Password">
 				</div>
 				<div class="form-group button">
-					<button type="submit" class="btn btn-primary btn-lg signin" onclick="send('login');">Logga in</button>
+					<button type="submit" class="btn btn-primary btn-lg signin action-btn" id="login">Logga in</button>
 				</div>
 			</div>
 		</div>
@@ -114,7 +114,7 @@
 					<input type="text" class="form-control" id="createendtime" placeholder="Sluttid">
 				</div>
 				<div class="form-group button">
-					<button type="submit" class="btn btn-primary btn-lg signin" onclick="send('login');">Lägg till</button>
+					<button type="submit" class="btn btn-primary btn-lg addevent">Lägg till</button>
 				</div>
 			</div>
 		</div>

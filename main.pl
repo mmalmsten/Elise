@@ -53,7 +53,7 @@ server(Port) :-
 	asserta(pass("1992")),
 	asserta(status(0)),
 	asserta(currentclient(none)).
-	
+		
 %****************************************************************************************
 %	Debug. (Restart Prolog after being used)
 %		thread_signal(chatroom, (attach_console, trace)).
@@ -135,9 +135,7 @@ tracker() :-
 		), List),
 	length(List,Length),
 	Length > 1,	
-	format(atom(Javascript), 'brokenPattern();', []),
-	currentclient(Client),
-	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),
+	alert(0),
 	debug(chat, 'Borde maskinen inte vara på???', []),!.
 
 % All good
@@ -252,9 +250,17 @@ tracker() :-
 tracker() :-
 	status(1),	
 	debug(chat, 'Tracker FAIL!', []),
+	alert(1),!.
+
+%****************************************************************************************
+% Email a warning if status not changed in 1 min
+%****************************************************************************************
+alert(Status) :-
 	format(atom(Javascript), 'brokenPattern();', []),
 	currentclient(Client),
-	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),!.
+	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),
+	findall(Email,email(Email,_,authorized),Emaillist),
+	alarm(60,send_email(Emaillist,warning, Status), _Id, [remove(true)]).
 
 
 %****************************************************************************************
@@ -391,7 +397,8 @@ handle_json_message(_{pid:"chat",type:"post",values:["login",_Email,_Pass]}, Cli
 	format(atom(Javascript), 'loginFail("bad");', []),
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}).
 
-handle_json_message(_{pid:"chat",type:"post",values:["auth",Strhash]}, Client, _Room) :- % Authentification message
+handle_json_message(_{pid:"chat",type:"post",values:["auth",Strhash]}, _Client, _Room) :- % Authentification message
+	debug(chat, 'Time to auth', []),
 	number_codes(Hash, Strhash),
 	Auth = email(Email,Hash,_),
 	retract(Auth),
@@ -451,6 +458,7 @@ handle_json_message(_, _, _) :-
 
 format_events(I) :-
 	format(atom(Javascript), 'cleanEvents();', []),
+	currentclient(Client),
 	hub_broadcast(chat, websocket{client:Client,data:Javascript,format:string,hub:chat,opcode:text}),!,
 	print_events(I).
 
@@ -459,6 +467,7 @@ print_events(I) :-
 	nth_clause(event(_,_,_,_), I, Ref),
 	clause(event(Status,Starttime,Message,Endtime), _, Ref),
 	format(atom(Javascript), 'printEvents("~p","~p","~p","~p");', [Status,Starttime,Message,Endtime]),
+	currentclient(Client),
 	hub_broadcast(chat, websocket{client:Client,data:Javascript,format:string,hub:chat,opcode:text}),
 	I1 is I + 1,
 	print_events(I1).
@@ -498,39 +507,58 @@ assert_events(0, _Eventint) :-
 %****************************************************************************************
 
 assert_emails(Checkemail) :-
-	email(Email,Hash,_),
+	email(Email,_,_),
 	Checkemail == Email,
-	send_email(Email),
+	send_email(Email,auth),
 	debug(chat, 'Email already exists and authentication email has been sent', []).
 
 assert_emails(Email) :-
 	term_hash(Email, Hash),
 	Mail = email(Email,Hash,unauthenticated),
 	asserta(Mail),
-	send_email(Email),
+	send_email(Email,auth),
 	debug(chat, 'New email added and authentication email has been sent', []).
 
 assert_emails(_Email) :-
-	debug(chat, 'Bad email', []).
+	debug(chat, 'Bad email or already authenticated email', []).
         		
 %****************************************************************************************
 % Send authentication email
 %****************************************************************************************
 
-send_email(Email) :-
-	smtp_send_mail(Email,send_message,[smtp('192.168.0.3'),security(none),header(from('Elise')),
-		auth_method(plain),subject('authentication'),from('elise@easyrider.nu'),content_type('text/html')]).
+send_email(Emaillist,warning,Status) :-
+	status(Status),
+	send_email(Emaillist,warning).
+
+send_email(Email,_,_) :-
+	debug(chat, 'Status has changed', [Email]).
+
+send_email(Email,auth) :-
+	smtp_send_mail(Email,send_auth_message,[smtp('192.168.0.3'),security(none),header(from('Elise')),
+		auth_method(plain),subject('Verifiera epost'),from('elise@easyrider.nu'),content_type('text/html')]).
+
+send_email([Email|Tail],warning) :-
+	smtp_send_mail(Email,send_warning_message,[smtp('192.168.0.3'),security(none),header(from('Elise')),
+		auth_method(plain),subject('Varning!'),from('elise@easyrider.nu'),content_type('text/html')]),
+	debug(chat, 'Warning email sent to ~p', [Email]),
+	send_email(Tail,warning).
 
 send_email(Email,_) :-
-	debug(chat, 'Problem sending email to ~p', [Email]).
+	debug(chat, 'Problem sending email to ~p or all emails been sent', [Email]).
 
-send_message(Out) :-
+send_auth_message(Out) :-
 		email(Email,Hash,_),
 		debug(chat, 'Auth email to ~p is as follows: ~a', [Email,Hash]),
-        format(Out, '<h1>Hi!</h1>', []),
-        format(Out, '<a href="http://localhost:8000/?auth=~a">Click link</a>,<p>\n', [Hash]),
-        format(Out, 'Cheers, Elise\n', []).
-        
+        format(Out, '<h1>Hej!</h1>\n', []),
+        format(Out, '<p>Klicka här för att verifiera din epost: \n <a href="http://localhost:8000/index.html?auth=~a">Verifiera!</a></p>\n', [Hash,Hash]),
+        format(Out, '<p>Med vänliga hälsningar,\nElise</p>\n', []).
+
+send_warning_message(Out) :-
+		email(Email,Hash,_),
+		debug(chat, 'Warning email to ~p is as follows: ~a', [Email,Hash]),
+        format(Out, '<h1>Hej!</h1>\n', []),
+        format(Out, '<p><a href="http://localhost:8000/?stop=~a">Klicka här för att stänga av</a></p>\n', [Hash]),
+        format(Out, '<p>Med vänliga hälsningar,\nElise</p>\n', []).        
         
 %****************************************************************************************
 % Read events from file
@@ -579,4 +607,4 @@ load_email(email(Email,_,_), Stream) :- !,
 	load_email(T2, Stream).
 	
 load_email(Term, _Stream) :-
-	type_error(email, Term). 
+	type_error(email, Term).

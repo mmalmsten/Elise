@@ -25,6 +25,21 @@ function ready(){
 	}
 }
 
+$(document).ready(function(){
+	ready();
+	if (getParameterByName('auth')) {
+		ws.send('{\"pid\" : \"chat\",\"type\" : \"post\",\"values\" : ["auth","' + getParameterByName('auth') +'"]}');
+	}
+	
+	$(".action-btn").click(function(){
+		var message = $(this).attr('id');
+		var email = document.getElementById("inputEmail").value;
+		var password = document.getElementById("inputPassword").value;
+		alert(message);
+		ws.send('{\"pid\" : \"chat\",\"type\" : \"post\",\"values\" : ["' + message + '","' + email +'","' + password +'"]}');
+	});	
+});
+
 function printMessage(data){
 	var message;
 	if(data == "stop") {
@@ -96,12 +111,6 @@ function correctPattern(){
     $('.correct .info .btn').attr("disabled", true);
 }
 
-function send(message){
-	var email = document.getElementById("inputEmail").value;
-	var password = document.getElementById("inputPassword").value;
-	ws.send('{\"pid\" : \"chat\",\"type\" : \"post\",\"values\" : ["' + message + '","' + email +'","' + password +'"]}');
-}
-
 function addEvent(){
     $("#create").fadeIn(500);
     $(".form-horizontal").animate({marginTop: "10vh"},1000);
@@ -111,7 +120,7 @@ function addEvent(){
     	$(".form-horizontal").animate({marginTop: "0vh"},1000);
 	});
 
-	$("#create .signin").click(function(){
+	$("#create .addevent").click(function(){
 		var startTime = document.getElementById("createstarttime").value;
 		var endTime = document.getElementById("createendtime").value;
 		var email = document.getElementById("inputEmail").value;
