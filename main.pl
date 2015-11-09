@@ -253,14 +253,23 @@ tracker() :-
 	alert(1),!.
 
 %****************************************************************************************
-% Email a warning if status not changed in 1 min
+% Email a warning if status not changed in 1 min, and stop if status not changed in 3 minutes
 %****************************************************************************************
 alert(Status) :-
 	format(atom(Javascript), 'brokenPattern();', []),
 	currentclient(Client),
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),
 	findall(Email,email(Email,_,authorized),Emaillist),
-	alarm(60,send_email(Emaillist,warning, Status), _Id, [remove(true)]).
+	alarm(60,send_email(Emaillist,warning, Status), _Id, [remove(true)]),
+	alarm(180,stop(Status), _Id, [remove(true)]).
+
+stop(Status) :-
+	status(Status),
+	currentclient(Client),
+	format(atom(Json), '$', []), % Send a $ to Raspberry Pi
+	hub_broadcast(Room.name, websocket{client:Client,data:Json,format:string,hub:chat,opcode:text}).
+	
+stop(_).
 
 
 %****************************************************************************************

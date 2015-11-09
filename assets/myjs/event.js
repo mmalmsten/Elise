@@ -10,6 +10,9 @@ function ready(){
 		ws = new WebSocket('ws://' + window.location.host + '/event');
 		ws.onopen = function() {
 			ws.send('{\"pid\" : \"event\",\"type\" : \"make\",\"values\" : []}');
+			if (getParameterByName('auth')) {
+				ws.send('{\"pid\" : \"chat\",\"type\" : \"post\",\"values\" : ["auth","' + getParameterByName('auth') +'"]}');
+			}
 		};
 		ws.onmessage = function (evt) {
 			console.log(evt.data);
@@ -27,15 +30,14 @@ function ready(){
 
 $(document).ready(function(){
 	ready();
-	if (getParameterByName('auth')) {
-		ws.send('{\"pid\" : \"chat\",\"type\" : \"post\",\"values\" : ["auth","' + getParameterByName('auth') +'"]}');
-	}
-	
+
+	simpleDatepicker("start");
+	simpleDatepicker("end");
+
 	$(".action-btn").click(function(){
 		var message = $(this).attr('id');
 		var email = document.getElementById("inputEmail").value;
 		var password = document.getElementById("inputPassword").value;
-		alert(message);
 		ws.send('{\"pid\" : \"chat\",\"type\" : \"post\",\"values\" : ["' + message + '","' + email +'","' + password +'"]}');
 	});	
 });
@@ -121,10 +123,10 @@ function addEvent(){
 	});
 
 	$("#create .addevent").click(function(){
-		var startTime = document.getElementById("createstarttime").value;
-		var endTime = document.getElementById("createendtime").value;
-		var email = document.getElementById("inputEmail").value;
-		var password = document.getElementById("inputPassword").value;
+		var startTime = $("#datepickerstart #year").val()+"-"+$("#datepickerstart #month").val()+"-"+$("#datepickerstart #day").val()+" "+$("#datepickerstart #hour").val()+":"+$("#datepickerstart #minute").val();
+		var endTime = $("#datepickerend #year").val()+"-"+$("#datepickerend #month").val()+"-"+$("#datepickerend #day").val()+" "+$("#datepickerend #hour").val()+":"+$("#datepickerend #minute").val();
+		var email = $("#inputEmail").val();
+		var password = $("#inputPassword").val();
 		ws.send('{\"pid\" : \"chat\",\"type\" : \"post\",\"values\" : ["addevent","' + dateToTimestamp(startTime) + '","' + dateToTimestamp(endTime) + '","' + email +'","' + password +'"]}');
 	    $("#create").fadeOut(500);
     	$(".form-horizontal").animate({marginTop: "0vh"},1000);
@@ -156,8 +158,9 @@ function printEvents(status, starttime, message, endtime){
 		style="current";
 	} else{
 		status = "";
+		endtime = formatTime(endtime);
 	}
-	$('#list table tr:last').after('<tr class="'+style+'"><td>'+formatTime(starttime)+'</td><td>'+formatTime(endtime)+'</td><td>'+message+'</td><td>'+status+'</td></tr>');
+	$('#list table tr:last').after('<tr class="'+style+'"><td>'+formatTime(starttime)+'</td><td>'+endtime+'</td><td>'+message+'</td><td>'+status+'</td></tr>');
 }
 
 var formatTime = function(unixTimestamp) {
