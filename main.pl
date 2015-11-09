@@ -47,7 +47,7 @@ server(Port) :-
 	init_events("event.pl"),
 	init_emails("email.pl"),
 	alarm(10,tracker(), _, [remove(true)]),
-	alarm(1,sensor_simulator(), _, [remove(true)]),
+	%alarm(1,sensor_simulator(), _, [remove(true)]),
 	asserta(event(0,0,unknown,0)),
 	asserta(email('web@easyrider.nu',1,authenticated)),
 	asserta(pass("1992")),
@@ -616,4 +616,4 @@ load_email(email(Email,_,_), Stream) :- !,
 	load_email(T2, Stream).
 	
 load_email(Term, _Stream) :-
-	type_error(email, Term).
+	type_error(email, Term).    
