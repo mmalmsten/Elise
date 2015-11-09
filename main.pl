@@ -260,14 +260,14 @@ alert(Status) :-
 	currentclient(Client),
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),
 	findall(Email,email(Email,_,authorized),Emaillist),
-	alarm(60,send_email(Emaillist,warning, Status), _Id, [remove(true)]),
-	alarm(180,stop(Status), _Id, [remove(true)]).
+	alarm(60,send_email(Emaillist,warning, Status), _, [remove(true)]),
+	alarm(180,stop(Status), _, [remove(true)]).
 
 stop(Status) :-
 	status(Status),
 	currentclient(Client),
 	format(atom(Json), '$', []), % Send a $ to Raspberry Pi
-	hub_broadcast(Room.name, websocket{client:Client,data:Json,format:string,hub:chat,opcode:text}).
+	hub_broadcast(chat, websocket{client:Client,data:Json,format:string,hub:chat,opcode:text}).
 	
 stop(_).
 
@@ -616,4 +616,4 @@ load_email(email(Email,_,_), Stream) :- !,
 	load_email(T2, Stream).
 	
 load_email(Term, _Stream) :-
-	type_error(email, Term).    
+	type_error(email, Term).
