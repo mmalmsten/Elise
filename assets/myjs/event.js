@@ -177,7 +177,7 @@ var formatTime = function(unixTimestamp) {
 
     var year = dt.getYear();
     var month = monthName[dt.getMonth()];
-    var day = dt.getDay();
+    var day = dt.getDate();
 
     var hours = zeroPad(dt.getHours());
     var minutes = zeroPad(dt.getMinutes());
