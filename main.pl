@@ -398,7 +398,9 @@ handle_json_message(_{pid:"chat",type:"post",values:["login",Email,Pwd]}, Client
 handle_json_message(_{pid:"chat",type:"post",values:["login",Email,Pwd]}, Client, _Room) :- % Please authenticate
 	pass(Pwd),
 	sub_string(Email, _, _, _, "@"),
-	assert_emails(Email),
+	atom_string(Emailatom, Email),
+	debug(chat, 'Email ~a', [Emailatom]),
+	assert_emails(Emailatom),
 	format(atom(Javascript), 'loginFail("auth");', []),
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}). 
 
@@ -515,14 +517,15 @@ assert_events(0, _Eventint) :-
 % If not already added, add email to email clauses list (later saved to email.pl)
 %****************************************************************************************
 
-assert_emails(Checkemail) :-
-	email(Email,_,_),
-	Checkemail == Email,
-	send_email(Email,auth),
-	debug(chat, 'Email already exists and authentication email has been sent', []).
+assert_emails(Email) :-
+	retractall(email(Email,_,unauthenticated)),
+	debug(chat, 'Email already exists and is removed from database', []),
+	fail.
 
 assert_emails(Email) :-
 	term_hash(Email, Hash),
+	debug(chat, 'Email ~p', [Email]),
+	debug(chat, 'Hash ~p', [Hash]),
 	Mail = email(Email,Hash,unauthenticated),
 	asserta(Mail),
 	send_email(Email,auth),
@@ -543,11 +546,11 @@ send_email(Email,_,_) :-
 	debug(chat, 'Status has changed', [Email]).
 
 send_email(Email,auth) :-
-	smtp_send_mail(Email,send_auth_message,[smtp('192.168.0.3'),security(none),header(from('Elise')),
+	smtp_send_mail(Email,send_auth_message,[smtp('188.166.29.228'),security(none),header(from('Elise')),
 		auth_method(plain),subject('Verifiera epost'),from('elise@easyrider.nu'),content_type('text/html')]).
 
 send_email([Email|Tail],warning) :-
-	smtp_send_mail(Email,send_warning_message,[smtp('192.168.0.3'),security(none),header(from('Elise')),
+	smtp_send_mail(Email,send_warning_message,[smtp('188.166.29.228'),security(none),header(from('Elise')),
 		auth_method(plain),subject('Varning!'),from('elise@easyrider.nu'),content_type('text/html')]),
 	debug(chat, 'Warning email sent to ~p', [Email]),
 	send_email(Tail,warning).

@@ -1,12 +1,23 @@
-# Ignore everything
-*
-
-# Add these files
-!.gitignore
-!main.pl
-!event.pl
-!assets/
-!documentation/
-!raspberry/
-
-!*
+.DS_Store
+README.md
+SWI-Prolog-7.1.20.pdf
+assets/.DS_Store
+assets/fonts/.DS_Store
+assets/img.zip
+assets/img/
+assets/mycss/.DS_Store
+assets/mycss/style.less
+assets/myjs/.DS_Store
+chat.pl
+daemon.pl
+dataset.txt
+debug.pl
+documentation/.DS_Store
+examensarbete/
+hub.pl
+json1.txt
+json2.txt
+start.sh
+stress_client.pl
+upstart/
+.gitignore

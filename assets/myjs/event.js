@@ -39,7 +39,14 @@ $(document).ready(function(){
 		var email = document.getElementById("inputEmail").value;
 		var password = document.getElementById("inputPassword").value;
 		ws.send('{\"pid\" : \"chat\",\"type\" : \"post\",\"values\" : ["' + message + '","' + email +'","' + password +'"]}');
-	});	
+	});
+
+	$(".enter").keyup(function(event){
+	    if(event.keyCode == 13){
+	        $(".action-btn#login").click();
+	    }
+	});
+
 });
 
 function printMessage(data){
