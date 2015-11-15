@@ -120,6 +120,11 @@ function correctPattern(){
     $('.correct .info .btn').attr("disabled", true);
 }
 
+function statusBox(msg){
+    $('#status-box').html("");
+    $('#status-box').html(msg);
+}
+
 function addEvent(){
     $("#create").fadeIn(500);
     $(".form-horizontal").animate({marginTop: "10vh"},1000);

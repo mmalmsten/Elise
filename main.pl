@@ -397,10 +397,10 @@ handle_json_message(_{pid:"chat",type:"post",values:["login",Email,Pwd]}, Client
 	
 handle_json_message(_{pid:"chat",type:"post",values:["login",Email,Pwd]}, Client, _Room) :- % Please authenticate
 	pass(Pwd),
+        debug(chat, 'Going to send auth email', []),
 	sub_string(Email, _, _, _, "@"),
-	atom_string(Emailatom, Email),
-	debug(chat, 'Email ~a', [Emailatom]),
-	assert_emails(Emailatom),
+        debug(chat, 'Email is ok', []),
+	assert_emails(Email),
 	format(atom(Javascript), 'loginFail("auth");', []),
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}). 
 
@@ -517,17 +517,20 @@ assert_events(0, _Eventint) :-
 % If not already added, add email to email clauses list (later saved to email.pl)
 %****************************************************************************************
 
-assert_emails(Email) :-
-	retractall(email(Email,_,unauthenticated)),
-	debug(chat, 'Email already exists and is removed from database', []),
-	fail.
+assert_emails(Checkemail) :-
+        debug(chat, 'taking a look inside assert_emails', []),
+	email(Email,_,_),
+	Checkemail == Email,
+        debug(chat, 'time to send an email', []),
+	send_email(Email,auth),
+	debug(chat, 'Email already exists and authentication email has been sent', []).
 
 assert_emails(Email) :-
+        debug(chat, 'Email does not already exist', []),
 	term_hash(Email, Hash),
-	debug(chat, 'Email ~p', [Email]),
-	debug(chat, 'Hash ~p', [Hash]),
 	Mail = email(Email,Hash,unauthenticated),
 	asserta(Mail),
+        debug(chat, 'time to send an email', []),
 	send_email(Email,auth),
 	debug(chat, 'New email added and authentication email has been sent', []).
 
@@ -546,11 +549,11 @@ send_email(Email,_,_) :-
 	debug(chat, 'Status has changed', [Email]).
 
 send_email(Email,auth) :-
-	smtp_send_mail(Email,send_auth_message,[smtp('188.166.29.228'),security(none),header(from('Elise')),
+	smtp_send_mail(Email,send_auth_message,[smtp('127.0.0.1'),security(none),header(from('Elise')),
 		auth_method(plain),subject('Verifiera epost'),from('elise@easyrider.nu'),content_type('text/html')]).
 
 send_email([Email|Tail],warning) :-
-	smtp_send_mail(Email,send_warning_message,[smtp('188.166.29.228'),security(none),header(from('Elise')),
+	smtp_send_mail(Email,send_warning_message,[smtp('127.0.0.1'),security(none),header(from('Elise')),
 		auth_method(plain),subject('Varning!'),from('elise@easyrider.nu'),content_type('text/html')]),
 	debug(chat, 'Warning email sent to ~p', [Email]),
 	send_email(Tail,warning).
@@ -562,7 +565,7 @@ send_auth_message(Out) :-
 		email(Email,Hash,_),
 		debug(chat, 'Auth email to ~p is as follows: ~a', [Email,Hash]),
         format(Out, '<h1>Hej!</h1>\n', []),
-        format(Out, '<p>Klicka här för att verifiera din epost: \n <a href="http://localhost:8000/index.html?auth=~a">Verifiera!</a></p>\n', [Hash,Hash]),
+        format(Out, '<p>Klicka här för att verifiera din epost: \n <a href="http://foderkalkylatorn.se:8000/index.html?auth=~a">Verifiera!</a></p>\n', [Hash,Hash]),
         format(Out, '<p>Med vänliga hälsningar,\nElise</p>\n', []).
 
 send_warning_message(Out) :-
@@ -619,4 +622,4 @@ load_email(email(Email,_,_), Stream) :- !,
 	load_email(T2, Stream).
 	
 load_email(Term, _Stream) :-
-	type_error(email, Term).
+	type_error(email, Term).  

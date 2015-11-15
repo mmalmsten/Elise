@@ -283,6 +283,13 @@ body {
   right: 15px;
   bottom: 15px;
 }
+#status-box {
+  position: fixed;
+  top: 15px;
+  left: 15px;
+  padding: 30px;
+  background: #fff;
+}
 .btn-primary {
   color: #fff;
   background-color: #748992;
