@@ -32,6 +32,11 @@ $(document).ready(function(){
 
 	login();
 
+	$("#hidden-btn").click(function(){
+		brokenPattern();
+	});
+
+
 	$(".action-btn").click(function(){
 		var message = $(this).attr('id');
 		var email = $("#inputEmail").val();
@@ -121,8 +126,8 @@ function correctPattern(){
 }
 
 function statusBox(msg){
-    $('#status-box').html("");
-    $('#status-box').html(msg);
+    //$('#status-box').html("");
+    $('#status-box').prepend(msg+"<br />");
 }
 
 function addEvent(){
@@ -172,6 +177,9 @@ function printEvents(status, starttime, message, endtime){
 		status = "";
 		endtime = formatTime(endtime);
 	}
+	if (message = "unknown")
+		message = "";
+
 	$('#list table tr:last').after('<tr class="'+style+'"><td>'+formatTime(starttime)+'</td><td>'+endtime+'</td><td>'+message+'</td><td>'+status+'</td></tr>');
 }
 

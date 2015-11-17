@@ -114,6 +114,7 @@ sensor_simulator() :-
 %****************************************************************************************
 
 tracker() :-
+	print_status("Startar backtracking"),
 	alarm(10,tracker(), _Id, [remove(true)]),
 	format(atom(Javascript), 'correctPattern();', []), % remove brokenPattern
 	hub_broadcast(chat, websocket{client:default,data:Javascript,format:string,hub:chat,opcode:text}),
@@ -169,6 +170,7 @@ tracker() :-
 tracker() :-
 	status(1),	
 	number_of_event_clauses(40), % Check if number of events is more than I
+	print_status("Maskinen är på, kollar om det verkar vara normalt"),
 	get_time(Timestamp),
 	stamp_date_time(Timestamp, date(_, _, _, Currenthour, Currentminute, _, _, _, _), 'UTC'),
 	event(0,Starttime,Message,Endtime),
@@ -183,6 +185,7 @@ tracker() :-
 tracker() :-
 	status(1),
 	number_of_event_clauses(25), % Check if number of events is more than I
+	print_status("Maskinen är på, kollar om det verkar vara normalt"),
 	get_time(Timestamp),
 	stamp_date_time(Timestamp, date(_, _, _, Currenthour, Currentminute, _, _, _, _), 'UTC'),
 	event(0,Starttime,Message,Endtime),
@@ -195,17 +198,17 @@ tracker() :-
 % Fail backtracking
 tracker() :-
 	status(1),	
-	print_status("Något är på tok!"),
+	print_status("Mönstret har brutits!"),
 	debug(chat, 'Tracker FAIL!', []),
 	alert(1),!.
 
 
 % If the stove is on, calculate if event is at least 50% longer than normal consider time of day, odd/even week AND weekday
 time_check() :-
-	print_status("Kontrollerar om maskinen varit på längre tid än normalt"),
 	status(1),	
 	get_time(Timestamp),
 	event(1,Currentstarttime,Thismessage,Currentendtime),
+	print_status("Kollar om maskinen varit på längre tid än normalt"),
 	\+(Thismessage == ignore),
 	findall(Starttime,(
 		event(0,Starttime,Oldmessage,Endtime),
@@ -224,6 +227,7 @@ time_check() :-
 	number_of_event_clauses(40), % Check if number of events is more than I
 	get_time(Timestamp),
 	event(1,Currentstarttime,Thismessage,Currentendtime),
+	print_status("Kollar om maskinen varit på längre tid än normalt"),
 	\+(Thismessage == ignore),
 	findall(Starttime,(
 		event(0,Starttime,Oldmessage,Endtime),
@@ -241,6 +245,7 @@ time_check() :-
 	number_of_event_clauses(30), % Check if number of events is more than I
 	get_time(Timestamp),
 	event(1,Currentstarttime,Thismessage,Currentendtime),
+	print_status("Kollar om maskinen varit på längre tid än normalt"),
 	\+(Thismessage == ignore),
 	findall(Starttime,(
 		event(0,Starttime,Oldmessage,Endtime),
@@ -256,6 +261,7 @@ time_check() :-
 	status(1),	
 	number_of_event_clauses(15), % Check if number of events is more than I
 	get_time(Timestamp),
+	print_status("Kollar om maskinen varit på längre tid än normalt"),
 	event(1,Currentstarttime,Thismessage,_Currentendtime),
 	\+(Thismessage == ignore),
 	findall(Starttime,(
@@ -263,12 +269,13 @@ time_check() :-
 		check_if_old(Starttime),
 		tracker_time_length(Oldmessage,Timestamp,Starttime,Endtime,Currentstarttime)
 	), _List),
+	print_status("Maskinen har inte varit på längre tid än normalt"),
 	debug(chat, 'Not longer time running than normal', []),!.
 
 % Fail backtracking
 time_check() :-
 	status(1),	
-	print_status("Något är på tok!"),
+	print_status("Maskinen har varit på längre tid än normalt!"),
 	debug(chat, 'Tracker FAIL!', []),
 	alert(1),!.
 
@@ -276,6 +283,7 @@ time_check() :-
 % Email a warning if status not changed in 1 min, and stop if status not changed in 3 minutes
 %****************************************************************************************
 alert(Status) :-
+	print_status("Skickar varning till GUI att mönstret brutits!"),
 	format(atom(Javascript), 'brokenPattern();', []),
 	hub_broadcast(chat, websocket{client:default,data:Javascript,format:string,hub:chat,opcode:text}),
 	findall(Email,email(Email,_,authorized),Emaillist),
@@ -283,6 +291,7 @@ alert(Status) :-
 	alarm(180,stop(Status), _, [remove(true)]).
 
 stop(Status) :-
+	print_status("Kommando om att stänga av spisen sänds nu till Raspberry Pi"),
 	status(Status),
 	format(atom(Json), '$', []), % Send a $ to Raspberry Pi
 	hub_broadcast(chat, websocket{client:default,data:Json,format:string,hub:chat,opcode:text}).
@@ -298,6 +307,7 @@ check_if_old(Timestamp) :- % Make sure event is not older than two months
 	X - 5184000 > Timestamp.
 
 check_time(Starttime, Endtime, Currenthour, Currentminute) :-
+	print_status("Kollar om En händelse liknande nuvarande har inträffat vid samma tid"),
 	stamp_date_time(Starttime, date(_, _, _, Eventstarthour, Eventstartminute, _, _, _, _), 'UTC'),
 	stamp_date_time(Endtime, date(_, _, _, Eventendhour, Eventendminute, _, _, _, _), 'UTC'),
 	Startofevent = Eventstarthour * 60 + Eventstartminute,
@@ -305,29 +315,32 @@ check_time(Starttime, Endtime, Currenthour, Currentminute) :-
 	Nowinminutes = Currenthour * 60 + Currentminute,
 	Nowinminutes > Startofevent - 30,
 	Nowinminutes < Endofevent + 30,
-	print_status("Ett event liknande detta har inträffat vid samma tid").
+	print_status("En händelse liknande nuvarande har inträffat vid samma tid").
 
 check_week_number(Timestamp, Starttime) :-
+	print_status("En händelse liknande nuvarande har samma jämna/udda vecka"),
 	format_time(atom(TWN), '%V', Timestamp), % Set week number and check odd/ even
 	atom_number(TWN, Thisweeknumber),
 	format_time(atom(EWD), '%V', Starttime),
 	atom_number(EWD, Eventweeknumber),
 	Evenodd is Thisweeknumber + Eventweeknumber,
 	Evenodd mod 2 =:= 0,
-	print_status("Ett event liknande detta har samma jämna/udda vecka").
+	print_status("En händelse liknande nuvarande har samma jämna/udda vecka").
 
 check_day_of_week(Timestamp, Starttime) :-
+	print_status("Kollar om en händelse liknande nuvarande har inträffat samma veckodag"),
 	format_time(atom(TDW), '%u', Timestamp),
 	atom_number(TDW, Thisdow),
 	format_time(atom(EWD), '%u', Starttime),
 	atom_number(EWD, Eventdow),
 	Thisdow == Eventdow,
-	print_status("Ett event liknande detta har inträffat samma veckodag").
+	print_status("En händelse liknande nuvarande har inträffat samma veckodag").
 
 %****************************************************************************************
 % Additional predicates to tracker
 %****************************************************************************************
 tracker_time_length(Oldmessage,Timestamp,Starttime,Endtime,Currentstarttime) :-
+	print_status("Kollar om pågående händelse har ägt rum längre tid än normalt"),
 	\+(Oldmessage == ignore),
 	Currentsession = Timestamp - Currentstarttime,
 	Eventsession = Endtime - Starttime,
@@ -389,6 +402,7 @@ handle_message(Message, _Room) :-
 %****************************************************************************************
 
 handle_json_message(_{pid:"event",type:"make",values:[]}, Client, _Room) :- % Web page opened
+	print_status("Välkommen! :)"),
 	debug(chat, 'Make recieved ~p.', [Client]).
 	
 handle_json_message(_{status:0,id:_Id}, _Client, _Room) :- % Connection from Raspberry Pi 
@@ -407,6 +421,7 @@ handle_json_message(_{status:_Status,id:_Id}, _Client, _Room) :- % Connection fr
 	debug(chat, 'Connection from Raspberry Pi. ~p ~p', [1,Eventint1]). 
 
 handle_json_message(_{pid:"chat",type:"post",values:["login",Email,Pwd]}, Client, _Room) :- % Successfull sign in
+	print_status("Dags att logga in!"),
 	debug(chat, 'Got login json from client', []),
 	pass(Pwd),
 	atom_string(Emailatom, Email),
@@ -414,9 +429,11 @@ handle_json_message(_{pid:"chat",type:"post",values:["login",Email,Pwd]}, Client
 	alarm(1,time_status(), _Id, [remove(true)]),
 	format(atom(Javascript), 'loginSuccess();', []),
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),
-	format_events(1).
+	format_events(1),
+	print_status("Du är nu inloggad!").
 	
 handle_json_message(_{pid:"chat",type:"post",values:["login",Email,Pwd]}, Client, _Room) :- % Please authenticate
+	print_status("Ojojoj, en oautenticerad e-post!"),
 	pass(Pwd),
 	sub_string(Email, _, _, _, "@"),
 	atom_string(Emailatom, Email),
@@ -427,7 +444,8 @@ handle_json_message(_{pid:"chat",type:"post",values:["login",Email,Pwd]}, Client
 
 handle_json_message(_{pid:"chat",type:"post",values:["login",_Email,_Pass]}, Client, _Room) :- % Sign in fails!!!
 	format(atom(Javascript), 'loginFail("bad");', []),
-	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}).
+	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),
+	print_status("Inloggningen misslyckades").
 
 handle_json_message(_{pid:"chat",type:"post",values:["auth",Strhash]}, _Client, _Room) :- % Authentification message
 	debug(chat, 'Time to auth', []),
@@ -446,7 +464,8 @@ handle_json_message(_{pid:"chat",type:"post",values:["auth",Strhash]}, _Client, 
 	flush_output(Stream),
 	debug(chat, 'Closing ~p', [Stream]),
 	close(Stream),
-	debug(chat, 'Authentification updated', []). 
+	debug(chat, 'Authentification updated', []),
+	print_status("Din ep-post är numera autentiserad"). 
 
 handle_json_message(_{pid:"chat",type:"post",values:["addevent",Starttime,Endtime,_Email,Pwd]}, Client, _Room) :- % Manually add new event
 	pass(Pwd),
@@ -454,7 +473,8 @@ handle_json_message(_{pid:"chat",type:"post",values:["addevent",Starttime,Endtim
 	number_string(End, Endtime),
 	asserta(event(0,Start,unknown,End)),
 	format(atom(Javascript), 'printMessage("eventadded");', []),
-	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}).
+	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),
+	print_status("En ny händelse har lagts till manuellt"). 
 
 handle_json_message(_{pid:"chat",type:"post",values:["stop",_Email,Pwd]}, Client, Room) :-
 	pass(Pwd),
@@ -464,6 +484,7 @@ handle_json_message(_{pid:"chat",type:"post",values:["stop",_Email,Pwd]}, Client
 	asserta(Updateevent),
 	format(atom(Json), '$', []), % Send a $ to Raspberry Pi
 	hub_broadcast(Room.name, websocket{client:default,data:Json,format:string,hub:chat,opcode:text}),
+	print_status("Spisen stängs nu av"),
 	format(atom(Javascript), 'printMessage("stop");', []),
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),!.
 
@@ -473,11 +494,13 @@ handle_json_message(_{pid:"chat",type:"post",values:["ignore",_Email,Pwd]}, Clie
 	retract(Event),
 	Updateevent = event(Status,Oldtime,ignore,Endtime),
 	asserta(Updateevent),
+	print_status("Pågående händelese kommer att ignoreras"),
 	format(atom(Javascript), 'printMessage("ignore");', []),
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),!.
 
 handle_json_message(_{pid:"chat",type:"post",values:["correct",_Email,Pwd]}, Client, _Room) :-
 	pass(Pwd),
+	print_status("Pågående händelse kommer att inkluderas i framtida beräkningar"),
 	format(atom(Javascript), 'printMessage("correct");', []),
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),!.
 
@@ -516,7 +539,10 @@ print_events(I) :-
 	I1 is I + 1,
 	print_events(I1).
 
-print_events(_) :-!.
+print_events(_) :-
+	print_status("Listan över event har uppdaterats"),!.
+
+print_events(_).
 
 %****************************************************************************************
 % Add event to event clauses list (in event.pl) if status have changed
@@ -544,7 +570,8 @@ assert_events(0, _Eventint) :-
 	nl(Stream),
 	flush_output(Stream),
 	close(Stream),
-	format_events(1).
+	format_events(1),
+	print_status("En ny händelse har blivit tillagd permanent").
 	
 %****************************************************************************************
 % If not already added, add email to email clauses list (later saved to email.pl)
@@ -554,6 +581,7 @@ assert_emails(Email) :-
 	email(Email,_,unauthenticated),
 	retractall(email(Email,_,unauthenticated)),
 	debug(chat, 'Email already exists and is removed from database', []),
+	print_status("E-posten finns redan i databasen, den kommer att tas bort"),
 	fail.
 
 assert_emails(Email) :-
@@ -563,10 +591,12 @@ assert_emails(Email) :-
 	Mail = email(Email,Hash,unauthenticated),
 	asserta(Mail),
 	send_email(Email,auth),
+	print_status("Ny e-post är tillagd och ett autentiserings-mail har skickats"),
 	debug(chat, 'New email added and authentication email has been sent', []).
 
 assert_emails(_Email) :-
-	debug(chat, 'Bad email or already authenticated email', []).
+	debug(chat, 'Bad email or already authenticated email', []),
+	print_status("E-posten antingen felaktig eller redan autentiserad").
         		
 %****************************************************************************************
 % Send authentication email
