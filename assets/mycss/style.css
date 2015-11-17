@@ -285,10 +285,10 @@ body {
 }
 #status-box {
   position: fixed;
-  top: 15px;
-  left: 15px;
+  top: 0px;
+  left: 0px;
   padding: 30px;
-  background: #fff;
+  width: 50vw;
 }
 .btn-primary {
   color: #fff;

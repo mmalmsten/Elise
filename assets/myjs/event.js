@@ -14,12 +14,8 @@ function ready(){
 				ws.send('{\"pid\" : \"chat\",\"type\" : \"post\",\"values\" : ["auth","' + getParameterByName('auth') +'"]}');
 			}
 		};
-		ws.onmessage = function (evt) {
+		ws.onmessage = function(evt) {
 			console.log(evt.data);
-			if (evt.data) {
-				var str = evt.data;
-				eval(str);
-			}
 		};
 		ws.onclose = function() {
 		};
@@ -34,6 +30,8 @@ $(document).ready(function(){
 	simpleDatepicker("start");
 	simpleDatepicker("end");
 
+	login();
+
 	$(".action-btn").click(function(){
 		var message = $(this).attr('id');
 		var email = document.getElementById("inputEmail").value;
@@ -43,11 +41,25 @@ $(document).ready(function(){
 
 	$(".enter").keyup(function(event){
 	    if(event.keyCode == 13){
-	        $(".action-btn#login").click();
+	        $("#login-btn").click();
 	    }
+	});
+	
+	$("#login").click(function(){
+		var email = document.getElementById("inputEmail").value;
+		var password = document.getElementById("inputPassword").value;
+		ws.send('{\"pid\" : \"chat\",\"type\" : \"post\",\"values\" : ["login","' + email +'","' + password +'"]}');
+		ws.onmessage = function(evt) {
+			console.log(evt.data);
+			if (evt.data) {
+				var str = evt.data;
+				eval(str);
+			}
+		};
 	});
 
 });
+
 
 function printMessage(data){
 	var message;
