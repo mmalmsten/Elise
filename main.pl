@@ -114,6 +114,7 @@ sensor_simulator() :-
 %****************************************************************************************
 
 tracker() :-
+	debug(chat, 'Startar backtracking ~n', []),
 	print_status("Startar backtracking"),
 	alarm(10,tracker(), _Id, [remove(true)]),
 	format(atom(Javascript), 'correctPattern();', []), % remove brokenPattern

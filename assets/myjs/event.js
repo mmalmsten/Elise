@@ -46,7 +46,7 @@ $(document).ready(function(){
 
 	$(".enter").keyup(function(event){
 	    if(event.keyCode == 13){
-	        $("#login-btn").click();
+	        $("#login").click();
 	    }
 	});
 	
@@ -127,7 +127,7 @@ function correctPattern(){
 
 function statusBox(msg){
     //$('#status-box').html("");
-    $('#status-box').prepend(msg+"<br />");
+    $('#status-box').prepend("<p>"+msg+"</p>");
 }
 
 function addEvent(){
