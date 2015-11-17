@@ -34,8 +34,8 @@ $(document).ready(function(){
 
 	$(".action-btn").click(function(){
 		var message = $(this).attr('id');
-		var email = document.getElementById("inputEmail").value;
-		var password = document.getElementById("inputPassword").value;
+		var email = $("#inputEmail").val();
+		var password = $("#inputPassword").val();
 		ws.send('{\"pid\" : \"chat\",\"type\" : \"post\",\"values\" : ["' + message + '","' + email +'","' + password +'"]}');
 	});
 
@@ -46,8 +46,8 @@ $(document).ready(function(){
 	});
 	
 	$("#login").click(function(){
-		var email = document.getElementById("inputEmail").value;
-		var password = document.getElementById("inputPassword").value;
+		var email = $("#inputEmail").val();
+		var password = $("#inputPassword").val();
 		ws.send('{\"pid\" : \"chat\",\"type\" : \"post\",\"values\" : ["login","' + email +'","' + password +'"]}');
 		ws.onmessage = function(evt) {
 			console.log(evt.data);
@@ -60,19 +60,17 @@ $(document).ready(function(){
 
 });
 
+var message = {
+	auth:"Hej där! Ett mail har skickats till dig! :)", 
+	bad:"Ooops! Det verkar som att fel lösenord, eller en ogiltig e-mail angivits.",
+	stop:"Spisen har nu stängts av, och den här händelsen ignoreras vid framtida beräkningar.",
+	ignore:"Den här händelsen ignoreras vid framtida beräkningar.",
+	correct:"Ooops! Ursäkta att jag störde!",
+	eventadded:"Jag kommer nu att ta hänsyn till den nya händelsen i mina uträkningar."
+};
 
 function printMessage(data){
-	var message;
-	if(data == "stop") {
-		message = "Spisen har nu stängts av, och den här händelsen ignoreras vid framtida beräkningar."		
-	} else if(data == "ignore") {
-		message = "Den här händelsen ignoreras vid framtida beräkningar."
-	} else if(data == "correct") {
-		message = "Ooops! Ursäkta att jag störde!"		
-	} else if(data == "eventadded") {
-		message = "Det nya eventet är tillagt i databasen."		
-	}
-	$("#printmessage #message").html(message);
+	$("#printmessage #message").html(message[data]);
     $("#printmessage").fadeIn(500);
     $("#printmessage").animate({marginTop: "20vh"},1000);
 	$("body").click(function(){
@@ -103,17 +101,7 @@ function loginSuccess(){
 
 function loginFail(msg){
 	$("#signin-message").remove();
-	var div = document.createElement('div');
-	if (msg === "auth") {
-		var text = 'Hej där! Ett mail har skickats till dig! :)';
-		div.className = 'success';
-	} else{
-		var text = 'Ooops! Det verkar som att fel lösenord, eller en ogiltig e-mail angivits.';
-		div.className = 'alert';
-	}
-	div.id = 'signin-message';
-	div.innerHTML = text;
-	document.getElementById("signin-message-placeholder").appendChild(div);
+	$("#signin-message-placeholder").append($("<div></div>").attr("id","#signin-message").text(message[msg]));
 	login();
 }
 

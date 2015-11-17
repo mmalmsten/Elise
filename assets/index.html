@@ -50,16 +50,16 @@
 
 		<div class="correct">
 			<div class="title">
-				<span class="lead">Det verkar som att mönstret har brutits? Stämmer detta?</span>
+				<span class="lead">Det verkar som att mönstret har brutits. Ska den här händelsen ignoreras vid framtida beräkningar?</span>
 			</div>
 			<div class="info">
 				<button value="stop" id="stop" class="btn btn-danger btn-lg action-btn" disabled>
 					Stäng av spisen!
 				</button>
-				<button value="correct" id="correct" class="btn btn-primary btn-lg action-btn" disabled>
-					Ja
-				</button>
 				<button value="ignore" id="ignore" class="btn btn-primary btn-lg action-btn" disabled>
+					Ja
+				</button>				
+				<button value="correct" id="correct" class="btn btn-primary btn-lg action-btn" disabled>
 					Nej
 				</button>
 			</div>
@@ -102,7 +102,6 @@
 		<div id="create">
 			<div class="form-horizontal">
 				<div class="close"><span class="glyphicon glyphicon-remove" aria-hidden="true"></span></div>
-				<div id="signin-message-placeholder"></div>
 				<div id="datepicker"></div>
 				<div class="form-group">
 					<label for="createstarttime" class="control-label">Starttid</label>
