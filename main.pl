@@ -46,9 +46,8 @@ server(Port) :-
 	http_server(http_dispatch, [port(Port)]),
 	init_events("event.pl"),
 	init_emails("email.pl"),
-	alarm(10,tracker(), _, [remove(true)]),
-	%alarm(1,sensor_simulator(), _, [remove(true)]),
-	%asserta(event(0,0,unknown,0)),
+	thread_create(sensor_simulator(), _, [alias(simulator)]),
+	thread_create(tracker(), _, [alias(tracker)]),
 	asserta(email('web@easyrider.nu',1,authenticated)),
 	asserta(pass("1992")),
 	asserta(status(0)).
@@ -93,7 +92,6 @@ chatroom(Room) :-
 	chatroom(Room).
 
 
-
 %****************************************************************************************
 % Sensor simulator
 %****************************************************************************************
@@ -105,8 +103,8 @@ sensor_simulator() :-
 	asserta(status(X)),
 	event(Eventint1,_,_,_),
 	assert_events(X,Eventint1),
-	alarm(10,sensor_simulator(), _Id, [remove(true)]).
-
+	sleep(10),
+	sensor_simulator().
 %****************************************************************************************
 % Tracker
 % This predicate keeps tracking the event clauses for unusual things that should not happen or
@@ -114,9 +112,9 @@ sensor_simulator() :-
 %****************************************************************************************
 
 tracker() :-
+	sleep(10),
 	debug(chat, 'Startar backtracking ~n', []),
 	print_status("Startar backtracking"),
-	alarm(10,tracker(), _Id, [remove(true)]),
 	format(atom(Javascript), 'correctPattern();', []), % remove brokenPattern
 	hub_broadcast(chat, websocket{client:default,data:Javascript,format:string,hub:chat,opcode:text}),
 	fail.
@@ -138,13 +136,15 @@ tracker() :-
 	Length > 1,	
 	alert(0),
 	print_status("Borde inte maskinen vara på nu?"),
-	debug(chat, 'Borde maskinen inte vara på???', []),!.
+	debug(chat, 'Borde maskinen inte vara på???', []),!,
+	tracker().
 
 % All good
 tracker() :-
 	status(0),	
 	print_status("Allt verkar vara i sin ordning"),
-	debug(chat, 'All good', []),!.
+	debug(chat, 'All good', []),!,
+	tracker().
 
 tracker() :-
 	status(1),	
@@ -165,7 +165,8 @@ tracker() :-
 	check_day_of_week(Timestamp, Starttime),
 	check_time(Starttime, Endtime, Currenthour, Currentminute),
 	print_status("Maskinen är på, och det verkar vara normalt"),
-	debug(chat, 'This event has happened this time before considering time of day, week number AND weekday', []),!.
+	debug(chat, 'This event has happened this time before considering time of day, week number AND weekday', []),!,
+	tracker().
 
 % Same as above, but do NOT consider week number
 tracker() :-
@@ -180,7 +181,8 @@ tracker() :-
 	check_day_of_week(Timestamp, Starttime),
 	check_time(Starttime, Endtime, Currenthour, Currentminute),
 	print_status("Maskinen är på, och det verkar vara normalt"),
-	debug(chat, 'This event has happened this time before considering time of day AND weekday', []),!.
+	debug(chat, 'This event has happened this time before considering time of day AND weekday', []),!,
+	tracker().
 
 % Same as above, but do NOT consider week number OR weekday
 tracker() :-
@@ -194,14 +196,16 @@ tracker() :-
 	check_if_old(Starttime),
 	check_time(Starttime, Endtime, Currenthour, Currentminute),
 	print_status("Maskinen är på, och det verkar vara normalt"),
-	debug(chat, 'This event has happened this time before considering time of day', []),!.
+	debug(chat, 'This event has happened this time before considering time of day', []),!,
+	tracker().
 
 % Fail backtracking
 tracker() :-
 	status(1),	
 	print_status("Mönstret har brutits!"),
 	debug(chat, 'Tracker FAIL!', []),
-	alert(1),!.
+	alert(1),!,
+	tracker().
 
 
 % If the stove is on, calculate if event is at least 50% longer than normal consider time of day, odd/even week AND weekday
@@ -288,10 +292,15 @@ alert(Status) :-
 	format(atom(Javascript), 'brokenPattern();', []),
 	hub_broadcast(chat, websocket{client:default,data:Javascript,format:string,hub:chat,opcode:text}),
 	findall(Email,email(Email,_,authorized),Emaillist),
-	alarm(60,send_email(Emaillist,warning, Status), _, [remove(true)]),
-	alarm(180,stop(Status), _, [remove(true)]).
+	%alarm(60,send_email(Emaillist,warning, Status), _, [remove(true)]),
+	thread_create(send_email(Emaillist,warning, Status), Id1, []),
+	thread_join(Id1,_Returns1),
+	%alarm(180,stop(Status), _, [remove(true)]).
+	thread_create(stop(Status), Id2, []),
+	thread_join(Id2,_Returns2).
 
 stop(Status) :-
+	sleep(180),
 	print_status("Kommando om att stänga av spisen sänds nu till Raspberry Pi"),
 	status(Status),
 	format(atom(Json), '$', []), % Send a $ to Raspberry Pi
@@ -427,7 +436,8 @@ handle_json_message(_{pid:"chat",type:"post",values:["login",Email,Pwd]}, Client
 	pass(Pwd),
 	atom_string(Emailatom, Email),
 	email(Emailatom,_,authenticated),
-	alarm(1,time_status(), _Id, [remove(true)]),
+	%alarm(1,time_status(), _Id, [remove(true)]),
+	thread_create(time_status(), _Id1, []),
 	format(atom(Javascript), 'loginSuccess();', []),
 	hub_send(Client, websocket{client:Client,data:Javascript,format:text,hub:chat,opcode:text}),
 	format_events(1),
@@ -604,6 +614,7 @@ assert_emails(_Email) :-
 %****************************************************************************************
 
 send_email(Emaillist,warning,Status) :-
+	sleep(60),
 	status(Status),
 	send_email(Emaillist,warning).
 

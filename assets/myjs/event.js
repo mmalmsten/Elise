@@ -126,7 +126,6 @@ function correctPattern(){
 }
 
 function statusBox(msg){
-    //$('#status-box').html("");
     $('#status-box').prepend("<p>"+msg+"</p>");
 }
 

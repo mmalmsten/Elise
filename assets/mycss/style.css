@@ -291,9 +291,10 @@ body {
   width: 50vw;
 }
 #status-box p {
-  opacity: 0.5;
+  opacity: 0.3;
+  font-size: 1.5em;
 }
-#status-box p p:first-child {
+#status-box p:first-child {
   opacity: 1;
 }
 .btn-primary {
