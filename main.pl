@@ -368,21 +368,19 @@ number_of_event_clauses(I) :-
 %****************************************************************************************
 
 time_status() :-
-	alarm(1,time_status(), _Id, [remove(true)]),
-	fail.
-
-time_status() :-
 	status(1),
 	get_time(Now), 
 	event(_Status,Oldtime,_Message,_),
 	Timestamp is Now - Oldtime, 
 	stamp_date_time(Timestamp, date(_, _, _, H, M, S, _, _, _), 'UTC'),
     format(atom(Javascript), 'document.getElementById("info").innerHTML = "~|~`0t~d~2+:~|~`0t~d~2+:~|~`0t~0f~2+";', [H,M,S]),
-	hub_broadcast(chat, websocket{client:default,data:Javascript,format:string,hub:chat,opcode:text}).
+	hub_broadcast(chat, websocket{client:default,data:Javascript,format:string,hub:chat,opcode:text}),
+	time_status().
 
 time_status() :-
     format(atom(Javascript), 'document.getElementById("info").innerHTML = "00:00:00";', []),
-	hub_broadcast(chat, websocket{client:default,data:Javascript,format:string,hub:chat,opcode:text}).
+	hub_broadcast(chat, websocket{client:default,data:Javascript,format:string,hub:chat,opcode:text}),
+	time_status().
 
 %****************************************************************************************
 % Get message from GUI
